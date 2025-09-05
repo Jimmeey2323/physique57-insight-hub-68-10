@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, BarChart3, Users, Target, Filter, MapPin, Building2, Home } from 'lucide-react';
 import { useSessionsData, SessionData } from '@/hooks/useSessionsData';
-import { ClassAttendanceMetricCards } from './ClassAttendanceMetricCards';
-import { ClassFormatRankings } from './ClassFormatRankings';
+import { useFilteredSessionsData } from '@/hooks/useFilteredSessionsData';
+import { ClassAttendanceFilterSection } from './ClassAttendanceFilterSection';
+import { EnhancedClassAttendanceMetricCards } from './EnhancedClassAttendanceMetricCards';
+import { EnhancedClassFormatRankings } from './EnhancedClassFormatRankings';
 import { ClassFormatComparison } from './ClassFormatComparison';
-import { HostedClassesTable } from './HostedClassesTable';
+import { EnhancedHostedClassesTable } from './EnhancedHostedClassesTable';
 import { ClassFormatAnalysisTable } from './ClassFormatAnalysisTable';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,14 +40,17 @@ export const ClassAttendanceSection: React.FC = () => {
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [compareWithTrainer, setCompareWithTrainer] = useState(false);
 
+  // Apply filters to the data
+  const filteredData = useFilteredSessionsData(sessionsData || []);
+
   // Filter data by location
   const locationFilteredData = useMemo(() => {
-    if (!sessionsData || activeLocation === 'all') return sessionsData || [];
+    if (!filteredData || activeLocation === 'all') return filteredData || [];
     
     const selectedLocation = locations.find(loc => loc.id === activeLocation);
-    if (!selectedLocation) return sessionsData || [];
+    if (!selectedLocation) return filteredData || [];
 
-    return sessionsData.filter(session => {
+    return filteredData.filter(session => {
       if (session.location === selectedLocation.fullName) return true;
       
       const sessionLoc = session.location?.toLowerCase() || '';
@@ -57,7 +62,7 @@ export const ClassAttendanceSection: React.FC = () => {
       
       return false;
     });
-  }, [sessionsData, activeLocation]);
+  }, [filteredData, activeLocation]);
 
   // Get unique class formats
   const uniqueClassFormats = useMemo(() => {
@@ -109,6 +114,9 @@ export const ClassAttendanceSection: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-6 py-8">
+        {/* Filter Section */}
+        <ClassAttendanceFilterSection data={sessionsData || []} />
+
         {/* Location Tabs */}
         <Tabs value={activeLocation} onValueChange={setActiveLocation} className="w-full">
           <div className="flex justify-center mb-8">
@@ -133,8 +141,11 @@ export const ClassAttendanceSection: React.FC = () => {
 
           {locations.map(location => (
             <TabsContent key={location.id} value={location.id} className="space-y-8">
-              {/* Metrics Cards */}
-              <ClassAttendanceMetricCards data={locationFilteredData} />
+              {/* Enhanced Metrics Cards */}
+              <EnhancedClassAttendanceMetricCards data={locationFilteredData} />
+
+              {/* Enhanced Class Format Rankings */}
+              <EnhancedClassFormatRankings data={locationFilteredData} />
 
               {/* Class Format Comparison */}
               <ClassFormatComparison 
@@ -145,14 +156,11 @@ export const ClassAttendanceSection: React.FC = () => {
                 onCompareWithTrainerChange={setCompareWithTrainer}
               />
 
-              {/* Class Format Rankings */}
-              <ClassFormatRankings data={locationFilteredData} />
-
               {/* Class Format Analysis Table with Multiple Views */}
               <ClassFormatAnalysisTable data={locationFilteredData} />
 
-              {/* Hosted Classes Table */}
-              <HostedClassesTable data={hostedClasses} />
+              {/* Enhanced Hosted Classes Table */}
+              <EnhancedHostedClassesTable data={hostedClasses} />
             </TabsContent>
           ))}
         </Tabs>

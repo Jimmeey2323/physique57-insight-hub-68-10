@@ -13,7 +13,7 @@ import { NewClientFilterOptions } from '@/types/dashboard';
 // Import new components for rebuilt client conversion tab
 import { EnhancedClientConversionFilterSection } from '@/components/dashboard/EnhancedClientConversionFilterSection';
 import { ClientConversionMetricCards } from '@/components/dashboard/ClientConversionMetricCards';
-import { ClientConversionTopBottomRanks } from '@/components/dashboard/ClientConversionTopBottomRanks';
+import { InteractiveClientConversionRanks } from '@/components/dashboard/InteractiveClientConversionRanks';
 import { ClientConversionInteractiveCharts } from '@/components/dashboard/ClientConversionInteractiveCharts';
 import { ClientConversionDataTableSelector } from '@/components/dashboard/ClientConversionDataTableSelector';
 import { ClientConversionMonthOnMonthTable } from '@/components/dashboard/ClientConversionMonthOnMonthTable';
@@ -304,8 +304,8 @@ const ClientRetention = () => {
           {/* Metric Cards */}
           <ClientConversionMetricCards data={filteredData} />
 
-          {/* Top & Bottom Rank Lists */}
-          <ClientConversionTopBottomRanks data={filteredData} />
+          {/* Interactive Top & Bottom Rank Lists */}
+          <InteractiveClientConversionRanks data={filteredData} />
 
           {/* Interactive Charts */}
           <ClientConversionInteractiveCharts data={filteredData} />

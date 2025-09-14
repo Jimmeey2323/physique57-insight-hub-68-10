@@ -16,8 +16,10 @@ import { usePayrollData } from '@/hooks/usePayrollData';
 import { ClassAttendanceUtilizationTable } from './ClassAttendanceUtilizationTable';
 import { ClassAttendanceRevenueTable } from './ClassAttendanceRevenueTable';
 import { ClassAttendanceEfficiencyTable } from './ClassAttendanceEfficiencyTable';
-import { ClassPerformanceRankingTable } from './ClassPerformanceRankingTable';
-import { EnhancedClassAttendancePayrollTable } from './EnhancedClassAttendancePayrollTable';
+import { EnhancedClassPerformanceRankingTable } from './EnhancedClassPerformanceRankingTable';
+import { EnhancedClassFormatPerformanceTable } from './EnhancedClassFormatPerformanceTable';
+import { ImprovedClassAttendancePayrollTable } from './ImprovedClassAttendancePayrollTable';
+import { MultiMetricMonthlyTrendsTable } from './MultiMetricMonthlyTrendsTable';
 import { useNavigate } from 'react-router-dom';
 
 const locations = [{
@@ -184,19 +186,19 @@ export const ClassAttendanceSection: React.FC = () => {
                 </div>
 
                 <TabsContent value="performance">
-                  <ClassPerformanceRankingTable data={locationFilteredData} location={activeLocation} />
+                  <EnhancedClassPerformanceRankingTable data={locationFilteredData} location={activeLocation} />
                 </TabsContent>
 
                 <TabsContent value="format">
-                  <ClassAttendancePerformanceTable data={locationFilteredData} location={activeLocation} />
+                  <EnhancedClassFormatPerformanceTable data={locationFilteredData} location={activeLocation} />
                 </TabsContent>
 
                 <TabsContent value="payroll">
-                  <EnhancedClassAttendancePayrollTable data={payrollData || []} location={activeLocation} />
+                  <ImprovedClassAttendancePayrollTable data={payrollData || []} location={activeLocation} />
                 </TabsContent>
 
                 <TabsContent value="trends">
-                  <ClassAttendanceMonthOnMonthTable data={locationFilteredData} payrollData={payrollData || []} location={activeLocation} />
+                  <MultiMetricMonthlyTrendsTable data={locationFilteredData} payrollData={payrollData || []} location={activeLocation} />
                 </TabsContent>
               </Tabs>
             </TabsContent>

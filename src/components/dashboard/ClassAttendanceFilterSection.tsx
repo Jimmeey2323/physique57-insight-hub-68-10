@@ -16,6 +16,8 @@ interface ClassAttendanceFilterSectionProps {
 
 export const ClassAttendanceFilterSection: React.FC<ClassAttendanceFilterSectionProps> = ({ data }) => {
   const { filters, updateFilters, clearAllFilters } = useSessionsFilters();
+  
+  // Apply filters to all components by updating the context
   const [isOpen, setIsOpen] = useState(false);
 
   const filterOptions = useMemo(() => {

@@ -66,12 +66,12 @@ export const UniformTrainerTable: React.FC<UniformTrainerTableProps> = ({
             {columns.map(column => <TableHead key={column.key} className={cn("font-bold text-primary-foreground px-4 text-sm whitespace-nowrap", column.align === 'center' && 'text-center', column.align === 'right' && 'text-right', column.sortable && 'cursor-pointer hover:bg-primary-foreground/10 transition-colors', column.className)} style={{
             height: '48px',
             width: column.width || 'auto'
-          }} onClick={() => handleSort(column)}>
-                <div className="flex items-center gap-2 h-full">
-                  {column.header}
-                  {column.sortable && sortField === column.key && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-                </div>
-              </TableHead>)}
+           }} onClick={() => handleSort(column)}>
+                 <div className="flex items-center gap-2 h-full">
+                   <span className="text-slate-100">{column.header}</span>
+                   {column.sortable && sortField === column.key && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 text-slate-100" /> : <ChevronDown className="w-4 h-4 text-slate-100" />)}
+                 </div>
+               </TableHead>)}
           </TableRow>
         </TableHeader>
         <TableBody>

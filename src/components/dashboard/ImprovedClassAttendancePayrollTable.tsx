@@ -44,7 +44,7 @@ export const ImprovedClassAttendancePayrollTable: React.FC<ImprovedClassAttendan
   data,
   location
 }) => {
-  const [selectedMetric, setSelectedMetric] = useState<string>('classAvgWithoutEmpty');
+  const [selectedMetric, setSelectedMetric] = useState<string>('totalSessions');
   const [sortBy, setSortBy] = useState<string>('monthYear');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [viewMode, setViewMode] = useState<string>('monthly');
@@ -302,9 +302,9 @@ export const ImprovedClassAttendancePayrollTable: React.FC<ImprovedClassAttendan
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <Table>
                     <TableHeader className="bg-slate-50">
-                      <TableRow className="hover:bg-slate-50">
+                      <TableRow>
                         <TableHead 
-                          className="cursor-pointer text-slate-700 font-semibold hover:bg-slate-100"
+                          className="cursor-pointer text-slate-700 font-semibold"
                           onClick={() => handleSort('location')}
                         >
                           <div className="flex items-center">
@@ -312,7 +312,7 @@ export const ImprovedClassAttendancePayrollTable: React.FC<ImprovedClassAttendan
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer text-slate-700 font-semibold hover:bg-slate-100"
+                          className="cursor-pointer text-slate-700 font-semibold"
                           onClick={() => handleSort('teacherName')}
                         >
                           <div className="flex items-center">
@@ -320,7 +320,7 @@ export const ImprovedClassAttendancePayrollTable: React.FC<ImprovedClassAttendan
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer text-slate-700 font-semibold hover:bg-slate-100"
+                          className="cursor-pointer text-slate-700 font-semibold"
                           onClick={() => handleSort('monthYear')}
                         >
                           <div className="flex items-center">
@@ -328,7 +328,7 @@ export const ImprovedClassAttendancePayrollTable: React.FC<ImprovedClassAttendan
                           </div>
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer text-slate-700 font-semibold text-center hover:bg-slate-100"
+                          className="cursor-pointer text-slate-700 font-semibold text-center"
                           onClick={() => handleSort(metric.id)}
                         >
                           <div className="flex items-center justify-center gap-2">

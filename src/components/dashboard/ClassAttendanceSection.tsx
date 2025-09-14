@@ -19,7 +19,7 @@ import { ClassAttendanceEfficiencyTable } from './ClassAttendanceEfficiencyTable
 import { EnhancedClassPerformanceRankingTable } from './EnhancedClassPerformanceRankingTable';
 import { EnhancedClassFormatPerformanceTable } from './EnhancedClassFormatPerformanceTable';
 import { ImprovedClassAttendancePayrollTable } from './ImprovedClassAttendancePayrollTable';
-import { MonthOnMonthTrendsTable } from './MonthOnMonthTrendsTable';
+import { MultiMetricMonthlyTrendsTable } from './MultiMetricMonthlyTrendsTable';
 import { useNavigate } from 'react-router-dom';
 
 const locations = [{
@@ -198,7 +198,7 @@ export const ClassAttendanceSection: React.FC = () => {
                 </TabsContent>
 
                 <TabsContent value="trends">
-                  <MonthOnMonthTrendsTable data={locationFilteredData} payrollData={payrollData || []} location={activeLocation} />
+                  <MultiMetricMonthlyTrendsTable data={locationFilteredData} payrollData={payrollData || []} location={activeLocation} />
                 </TabsContent>
               </Tabs>
             </TabsContent>

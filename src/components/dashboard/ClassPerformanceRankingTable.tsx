@@ -1,480 +1,373 @@
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trophy, BarChart3, Eye, Calendar, Clock, User, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Calendar, Users, DollarSign, Target, Activity, MapPin, Clock, Trophy, Eye, User } from 'lucide-react';
+import { formatCurrency, formatNumber, formatPercentage } from '@/utils/formatters';
 import { SessionData } from '@/hooks/useSessionsData';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 
 interface ClassPerformanceRankingTableProps {
   data: SessionData[];
   location?: string;
 }
 
-interface GroupedClassData {
-  uniqueId: string;
-  className: string;
-  trainerName: string;
-  dayOfWeek: string;
-  time: string;
-  location: string;
-  sessions: SessionData[];
-  avgCheckIns: number;
-  fillPercentage: number;
-  totalRevenue: number;
-  totalCheckIns: number;
-  totalCapacity: number;
-  totalLateCancellations: number;
-  sessionCount: number;
-}
+export const ClassPerformanceRankingTable: React.FC<ClassPerformanceRankingTableProps> = ({
+  data,
+  location
+}) => {
+  const [sortBy, setSortBy] = useState<string>('totalSessions');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [minSessions, setMinSessions] = useState(2);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-type SortField = keyof GroupedClassData;
-type SortDirection = 'asc' | 'desc';
+  const processedData = useMemo(() => {
+    if (!data || data.length === 0) return [];
 
-export const ClassPerformanceRankingTable: React.FC<ClassPerformanceRankingTableProps> = ({ data, location }) => {
-  const [selectedClass, setSelectedClass] = useState<GroupedClassData | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<SortField>('avgCheckIns');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const itemsPerPage = 10;
+    // Group data by cleanedClass/classType
+    const grouped = data.reduce((acc, session) => {
+      const classType = session.cleanedClass || session.classType || 'Unknown';
+      
+      // Filter out hosted classes and classes below minimum sessions
+      if (classType.toLowerCase().includes('hosted')) return acc;
+      
+      if (!acc[classType]) {
+        acc[classType] = {
+          classType,
+          totalSessions: 0,
+          totalCapacity: 0,
+          totalCheckedIn: 0,
+          totalRevenue: 0,
+          totalBooked: 0,
+          emptySessionsCount: 0,
+          revenueGeneratingSessions: 0,
+          sessions: [] // Store individual sessions
+        };
+      }
+
+      const classData = acc[classType];
+      classData.totalSessions += 1;
+      classData.totalCapacity += session.capacity || 0;
+      classData.totalCheckedIn += session.checkedInCount || 0;
+      classData.totalRevenue += session.totalPaid || 0;
+      classData.totalBooked += session.bookedCount || 0;
+      classData.sessions.push(session); // Store the session
+
+      if ((session.checkedInCount || 0) === 0) {
+        classData.emptySessionsCount += 1;
+      }
+
+      if ((session.totalPaid || 0) > 0) {
+        classData.revenueGeneratingSessions += 1;
+      }
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Filter out classes with sessions < minSessions
+    const filteredData = Object.values(grouped).filter((classData: any) => 
+      classData.totalSessions >= minSessions
+    );
+
+    // Calculate additional metrics
+    const enrichedData = filteredData.map((classData: any) => ({
+      ...classData,
+      fillRate: classData.totalCapacity > 0 ? (classData.totalCheckedIn / classData.totalCapacity) * 100 : 0,
+      showUpRate: classData.totalBooked > 0 ? (classData.totalCheckedIn / classData.totalBooked) * 100 : 0,
+      avgRevenue: classData.totalSessions > 0 ? classData.totalRevenue / classData.totalSessions : 0,
+      revenuePerAttendee: classData.totalCheckedIn > 0 ? classData.totalRevenue / classData.totalCheckedIn : 0,
+      utilizationRate: classData.totalSessions > 0 ? ((classData.totalSessions - classData.emptySessionsCount) / classData.totalSessions) * 100 : 0,
+      avgClassSize: classData.totalSessions > 0 ? classData.totalCheckedIn / classData.totalSessions : 0,
+      emptySessionRate: classData.totalSessions > 0 ? (classData.emptySessionsCount / classData.totalSessions) * 100 : 0,
+      revenueEfficiency: classData.totalSessions > 0 ? (classData.revenueGeneratingSessions / classData.totalSessions) * 100 : 0
+    }));
+
+    // Sort data
+    return enrichedData.sort((a, b) => {
+      const aVal = a[sortBy];
+      const bVal = b[sortBy];
+      
+      if (typeof aVal === 'string') {
+        return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+  }, [data, sortBy, sortDirection, minSessions]);
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const toggleRowExpansion = (classType: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(classType)) {
+      newExpanded.delete(classType);
+    } else {
+      newExpanded.add(classType);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortBy !== column) return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="ml-2 h-4 w-4" />
+      : <ArrowDown className="ml-2 h-4 w-4" />;
+  };
 
   if (!data || data.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-muted-foreground">No class performance data available</p>
+      <Card className="bg-gradient-to-br from-white via-slate-50/30 to-white border-0 shadow-xl">
+        <CardContent className="p-6 text-center">
+          <p className="text-slate-600">No class performance data available</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Group sessions by UniqueID1 (column 17 in the sheet)
-  const classGroups = data.reduce((acc, session) => {
-    const uniqueId = session.uniqueId || 'unknown';
-    if (!acc[uniqueId]) {
-      acc[uniqueId] = [];
-    }
-    acc[uniqueId].push(session);
-    return acc;
-  }, {} as Record<string, SessionData[]>);
-
-  // Calculate performance metrics for each unique class
-  const classPerformance: GroupedClassData[] = Object.entries(classGroups)
-    .map(([uniqueId, sessions]) => {
-      const firstSession = sessions[0];
-      const totalCheckIns = sessions.reduce((sum, s) => sum + s.checkedInCount, 0);
-      const totalRevenue = sessions.reduce((sum, s) => sum + (s.revenue || s.totalPaid || 0), 0);
-      const totalCapacity = sessions.reduce((sum, s) => sum + s.capacity, 0);
-      const totalLateCancellations = sessions.reduce((sum, s) => sum + (s.lateCancelledCount || 0), 0);
-      const avgCheckIns = totalCheckIns / sessions.length;
-      const fillPercentage = totalCapacity > 0 ? (totalCheckIns / totalCapacity) * 100 : 0;
-
-      return {
-        uniqueId,
-        className: firstSession.cleanedClass || firstSession.classType || 'Unknown Class',
-        trainerName: firstSession.trainerName || `${firstSession.trainerFirstName} ${firstSession.trainerLastName}`.trim(),
-        dayOfWeek: firstSession.dayOfWeek,
-        time: firstSession.time,
-        location: firstSession.location,
-        sessions,
-        sessionCount: sessions.length,
-        avgCheckIns,
-        fillPercentage,
-        totalRevenue,
-        totalCheckIns,
-        totalCapacity,
-        totalLateCancellations
-      };
-    })
-    .filter(classData => 
-      classData.sessionCount >= 2 && 
-      !classData.className.toLowerCase().includes('hosted')
-    );
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
-    }
-    setCurrentPage(1);
-  };
-
-  const sortedPerformance = useMemo(() => {
-    return [...classPerformance].sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-      
-      return 0;
-    });
-  }, [classPerformance, sortField, sortDirection]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(sortedPerformance.length / itemsPerPage);
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedPerformance.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedPerformance, currentPage, itemsPerPage]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5" />
-            Class Performance Rankings (Grouped by UniqueID1)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-auto border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="whitespace-nowrap">Rank</TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('className')}
+    <Card className="shadow-xl border-0 rounded-2xl overflow-hidden bg-white">
+      <CardHeader className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white">
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Trophy className="w-6 h-6" />
+              Class Performance Rankings
+              <Badge variant="secondary" className="bg-white/20 text-white">
+                {processedData.length} classes
+              </Badge>
+            </CardTitle>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-white">
+              <label htmlFor="minSessions" className="text-sm font-medium">
+                Min Sessions:
+              </label>
+              <select
+                id="minSessions"
+                value={minSessions}
+                onChange={(e) => setMinSessions(Number(e.target.value))}
+                className="bg-white/20 border border-white/30 rounded px-2 py-1 text-white text-sm backdrop-blur-sm"
+              >
+                <option value={1} className="text-black">1+</option>
+                <option value={2} className="text-black">2+</option>
+                <option value={5} className="text-black">5+</option>
+                <option value={10} className="text-black">10+</option>
+                <option value={20} className="text-black">20+</option>
+              </select>
+            </div>
+            
+            <div className="text-white/80 text-sm">
+              Excludes hosted classes • Shows classes with {minSessions}+ sessions • Click rows to expand
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-0">
+        <div className="max-h-[700px] overflow-x-auto overflow-y-auto">
+          <Table>
+            <TableHeader className="sticky top-0 z-20 bg-slate-50">
+              <TableRow className="border-b-2 border-slate-200">
+                <TableHead className="sticky left-0 bg-slate-50 z-30 border-r border-slate-200 min-w-[200px]">
+                  <Button variant="ghost" onClick={() => handleSort('classType')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    Class Type {getSortIcon('classType')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[100px]">
+                  <Button variant="ghost" onClick={() => handleSort('totalSessions')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Sessions {getSortIcon('totalSessions')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[100px]">
+                  <Button variant="ghost" onClick={() => handleSort('totalCapacity')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    <Users className="w-4 h-4 mr-1" />
+                    Capacity {getSortIcon('totalCapacity')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('totalCheckedIn')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    <Activity className="w-4 h-4 mr-1" />
+                    Attendance {getSortIcon('totalCheckedIn')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[100px]">
+                  <Button variant="ghost" onClick={() => handleSort('fillRate')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    <Target className="w-4 h-4 mr-1" />
+                    Fill Rate {getSortIcon('fillRate')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('showUpRate')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    Show-up Rate {getSortIcon('showUpRate')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('avgRevenue')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    Avg Revenue {getSortIcon('avgRevenue')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('totalRevenue')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    Total Revenue {getSortIcon('totalRevenue')}
+                  </Button>
+                </TableHead>
+                <TableHead className="text-center min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('utilizationRate')} className="font-bold text-slate-700 p-0 h-auto whitespace-nowrap">
+                    Utilization {getSortIcon('utilizationRate')}
+                  </Button>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {processedData.map((row, index) => (
+                <React.Fragment key={row.classType}>
+                  <TableRow 
+                    className="cursor-pointer transition-colors border-b hover:bg-slate-50"
+                    onClick={() => toggleRowExpansion(row.classType)}
                   >
-                    <div className="flex items-center gap-1">
-                      Class Name
-                      {sortField === 'className' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('trainerName')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Trainer
-                      {sortField === 'trainerName' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('dayOfWeek')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Day
-                      {sortField === 'dayOfWeek' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('time')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Time
-                      {sortField === 'time' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('location')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Location
-                      {sortField === 'location' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('sessionCount')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Sessions
-                      {sortField === 'sessionCount' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('avgCheckIns')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Avg Check-ins
-                      {sortField === 'avgCheckIns' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('fillPercentage')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Fill Rate
-                      {sortField === 'fillPercentage' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('totalCheckIns')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Total Attendance
-                      {sortField === 'totalCheckIns' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('totalLateCancellations')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Late Cancelled
-                      {sortField === 'totalLateCancellations' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
-                    onClick={() => handleSort('totalRevenue')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Revenue
-                      {sortField === 'totalRevenue' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="whitespace-nowrap">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedData.map((classData, index) => {
-                  const actualRank = (currentPage - 1) * itemsPerPage + index + 1;
-                  return (
-                  <TableRow key={classData.uniqueId}>
-                    <TableCell className="text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1">
-                        {actualRank <= 3 && (
-                          <Trophy className={`w-4 h-4 ${actualRank === 1 ? 'text-yellow-500' : actualRank === 2 ? 'text-gray-400' : 'text-amber-600'}`} />
+                    <TableCell className="sticky left-0 bg-white z-10 border-r border-slate-200 font-semibold">
+                      <div className="flex items-center gap-2 whitespace-nowrap min-w-[180px]">
+                        {index + 1 <= 3 && (
+                          <Trophy className={`w-4 h-4 ${index + 1 === 1 ? 'text-yellow-500' : index + 1 === 2 ? 'text-gray-400' : 'text-amber-600'}`} />
                         )}
-                        <span className="font-bold">{actualRank}</span>
+                        {expandedRows.has(row.classType) ? 
+                          <ChevronDown className="w-4 h-4 text-blue-600" /> : 
+                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                        }
+                        <span className="font-medium">{row.classType}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <span className="font-medium">{classData.className}</span>
+                    <TableCell className="text-center font-medium whitespace-nowrap">
+                      {formatNumber(row.totalSessions)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">{classData.trainerName}</span>
-                      </div>
+                    <TableCell className="text-center font-medium whitespace-nowrap">
+                      {formatNumber(row.totalCapacity)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">{classData.dayOfWeek}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">{classData.time}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
-                      {classData.location}
+                    <TableCell className="text-center font-medium whitespace-nowrap">
+                      {formatNumber(row.totalCheckedIn)}
                     </TableCell>
                     <TableCell className="text-center whitespace-nowrap">
-                      <Badge variant="outline">{classData.sessionCount}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-semibold whitespace-nowrap">
-                      {classData.avgCheckIns.toFixed(1)}
-                    </TableCell>
-                    <TableCell className="text-center whitespace-nowrap">
-                      <Badge variant={classData.fillPercentage >= 80 ? 'default' : classData.fillPercentage >= 60 ? 'secondary' : 'destructive'}>
-                        {classData.fillPercentage.toFixed(1)}%
+                      <Badge 
+                        className={
+                          row.fillRate >= 80 ? 'bg-green-100 text-green-800' :
+                          row.fillRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }
+                      >
+                        {formatPercentage(row.fillRate)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center font-semibold whitespace-nowrap">
-                      {classData.totalCheckIns.toLocaleString()}
-                    </TableCell>
                     <TableCell className="text-center whitespace-nowrap">
-                      <Badge variant={classData.totalLateCancellations > 10 ? 'destructive' : classData.totalLateCancellations > 5 ? 'secondary' : 'default'}>
-                        {classData.totalLateCancellations}
+                      <Badge 
+                        className={
+                          row.showUpRate >= 90 ? 'bg-green-100 text-green-800' :
+                          row.showUpRate >= 75 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }
+                      >
+                        {formatPercentage(row.showUpRate)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold whitespace-nowrap">
-                      ₹{classData.totalRevenue.toLocaleString()}
+                    <TableCell className="text-center font-medium text-green-700 whitespace-nowrap">
+                      {formatCurrency(row.avgRevenue)}
                     </TableCell>
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedClass(classData)}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Details
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>
-                              Class Details: {classData.className} - {classData.trainerName}
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                              <div><strong>Day:</strong> {classData.dayOfWeek}</div>
-                              <div><strong>Time:</strong> {classData.time}</div>
-                              <div><strong>Location:</strong> {classData.location}</div>
-                              <div><strong>Unique ID:</strong> {classData.uniqueId}</div>
-                            </div>
-                            <div className="overflow-auto border rounded-lg">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Session Name</TableHead>
-                                    <TableHead>Capacity</TableHead>
-                                    <TableHead>Checked In</TableHead>
-                                    <TableHead>Booked</TableHead>
-                                    <TableHead>Late Cancelled</TableHead>
-                                    <TableHead>Revenue</TableHead>
-                                    <TableHead>Fill %</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {classData.sessions.map((session, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell>{session.date}</TableCell>
-                                      <TableCell>{session.sessionName}</TableCell>
-                                      <TableCell>{session.capacity}</TableCell>
-                                      <TableCell>{session.checkedInCount}</TableCell>
-                                      <TableCell>{session.bookedCount}</TableCell>
-                                      <TableCell>{session.lateCancelledCount}</TableCell>
-                                      <TableCell>₹{(session.revenue || session.totalPaid || 0).toLocaleString()}</TableCell>
-                                      <TableCell>
-                                        <Badge variant={session.fillPercentage && session.fillPercentage >= 80 ? 'default' : 'secondary'}>
-                                          {session.fillPercentage?.toFixed(1) || '0.0'}%
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                    <TableCell className="text-center font-bold text-green-800 whitespace-nowrap">
+                      {formatCurrency(row.totalRevenue)}
+                    </TableCell>
+                    <TableCell className="text-center whitespace-nowrap">
+                      <Badge 
+                        className={
+                          row.utilizationRate >= 80 ? 'bg-blue-100 text-blue-800' :
+                          row.utilizationRate >= 60 ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }
+                      >
+                        {formatPercentage(row.utilizationRate)}
+                      </Badge>
                     </TableCell>
                   </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, sortedPerformance.length)} of {sortedPerformance.length} results
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePageChange(pageNum)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          <Card className="mt-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Performance Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-line text-sm text-muted-foreground">
-                  • Classes grouped by UniqueID1 and ranked by average check-ins{'\n'}
-                  • Each row represents a unique class schedule (trainer + day + time){'\n'}
-                  • Click "Details" to view individual session data for each class{'\n'}
-                  • Fill percentages and revenue show performance across all sessions
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
-    </div>
+                  
+                  {expandedRows.has(row.classType) && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="p-0 bg-slate-50/50">
+                        <div className="p-4">
+                          <div className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                            <Activity className="w-4 h-4" />
+                            Individual Sessions for {row.classType} ({row.sessions.length} total)
+                          </div>
+                          <div className="max-h-64 overflow-auto bg-white rounded-lg border">
+                            <Table>
+                              <TableHeader className="sticky top-0 bg-slate-100">
+                                <TableRow>
+                                  <TableHead className="text-xs whitespace-nowrap">Date</TableHead>
+                                  <TableHead className="text-xs whitespace-nowrap">Time</TableHead>
+                                  <TableHead className="text-xs whitespace-nowrap">Trainer</TableHead>
+                                  <TableHead className="text-xs whitespace-nowrap">Location</TableHead>
+                                  <TableHead className="text-xs text-center whitespace-nowrap">Capacity</TableHead>
+                                  <TableHead className="text-xs text-center whitespace-nowrap">Checked In</TableHead>
+                                  <TableHead className="text-xs text-center whitespace-nowrap">Fill Rate</TableHead>
+                                  <TableHead className="text-xs text-center whitespace-nowrap">Revenue</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {row.sessions.slice(0, 20).map((session: any, sessionIndex: number) => (
+                                  <TableRow key={sessionIndex} className="text-xs">
+                                    <TableCell className="whitespace-nowrap">{session.date}</TableCell>
+                                    <TableCell className="whitespace-nowrap">
+                                      <Badge variant="outline" className="text-xs">
+                                        {session.time}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="whitespace-nowrap">{session.trainerName}</TableCell>
+                                    <TableCell className="whitespace-nowrap text-slate-600">{session.location}</TableCell>
+                                    <TableCell className="text-center whitespace-nowrap">{session.capacity}</TableCell>
+                                    <TableCell className="text-center whitespace-nowrap">{session.checkedInCount}</TableCell>
+                                    <TableCell className="text-center whitespace-nowrap">
+                                      <Badge 
+                                        variant="outline"
+                                        className={`text-xs ${
+                                          (session.fillPercentage || 0) >= 80 ? 'border-green-200 text-green-700' :
+                                          (session.fillPercentage || 0) >= 60 ? 'border-yellow-200 text-yellow-700' :
+                                          'border-red-200 text-red-700'
+                                        }`}
+                                      >
+                                        {formatPercentage(session.fillPercentage || 0)}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center text-green-600 whitespace-nowrap">
+                                      {formatCurrency(session.totalPaid || 0)}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {row.sessions.length > 20 && (
+                              <div className="p-2 text-center text-xs text-slate-500 border-t">
+                                Showing first 20 of {row.sessions.length} sessions
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

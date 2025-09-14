@@ -68,8 +68,8 @@ function OptimizedTableComponent<T extends Record<string, any>>({
 
   return (
     <div 
-      className="relative w-full overflow-auto border border-gray-200 rounded-lg bg-white shadow-sm"
-      style={{ maxHeight }}
+      className="relative w-full border border-gray-200 rounded-lg bg-white shadow-sm"
+      style={{ maxHeight, overflowX: 'auto', overflowY: 'auto' }}
     >
       <Table>
         <TableHeader className={stickyHeader ? "sticky top-0 z-20 bg-gradient-to-r from-gray-50 to-gray-100" : "bg-gradient-to-r from-gray-50 to-gray-100"}>

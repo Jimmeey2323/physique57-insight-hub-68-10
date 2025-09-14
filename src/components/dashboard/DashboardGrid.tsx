@@ -93,41 +93,84 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ onButtonClick }) =
     },
     {
       id: 'powercycle-vs-barre',
-      title: 'PowerCycle vs Barre',
+      title: 'powerCycle Vs Barre Vs Strength',
       description: 'Comparative analysis of PowerCycle, Barre, and Strength classes',
       icon: Activity,
       color: 'from-violet-500 to-violet-600',
       hoverColor: 'hover:from-violet-600 hover:to-violet-700'
+    },
+    {
+      id: 'expiration-analytics',
+      title: 'Expirations & Churn',
+      description: 'Membership expirations and customer retention analysis',
+      icon: Calendar,
+      color: 'from-amber-500 to-amber-600',
+      hoverColor: 'hover:from-amber-600 hover:to-amber-700'
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-2">
       {dashboardSections.map((section) => {
         const IconComponent = section.icon;
         return (
           <Card 
             key={section.id}
-            className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-white border border-gray-200 overflow-hidden"
+            className="group cursor-pointer relative overflow-hidden bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-2xl transition-all duration-500 ease-out hover:-translate-y-3 hover:rotate-1 transform-gpu"
             onClick={() => onButtonClick(section.id)}
           >
-            <CardHeader className="pb-3">
-              <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${section.color} ${section.hoverColor} flex items-center justify-center mb-3 transition-all duration-300 group-hover:scale-110`}>
-                <IconComponent className="w-6 h-6 text-white" />
+            {/* Animated Background Gradient */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-0 group-hover:opacity-10 transition-opacity duration-700`} />
+            
+            {/* Subtle Border Animation */}
+            <div className={`absolute inset-0 rounded-lg bg-gradient-to-r ${section.color} opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500 -z-10`} />
+            
+            <CardHeader className="pb-4 relative z-10">
+              {/* Icon Container with Advanced Animation */}
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${section.color} ${section.hoverColor} flex items-center justify-center mb-4 transition-all duration-500 group-hover:scale-125 group-hover:rotate-12 shadow-lg group-hover:shadow-2xl`}>
+                <IconComponent className="w-7 h-7 text-white transition-transform duration-300 group-hover:scale-110" />
+                
+                {/* Animated Ring */}
+                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${section.color} opacity-0 group-hover:opacity-30 animate-ping`} />
               </div>
-              <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">
+              
+              {/* Title with Gradient Text Animation */}
+              <CardTitle className="text-xl font-bold text-gray-900 group-hover:bg-gradient-to-r group-hover:from-gray-900 group-hover:to-gray-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-500 leading-tight">
                 {section.title}
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-gray-600 leading-relaxed">
+            
+            <CardContent className="pt-0 relative z-10">
+              {/* Description with Fade Animation */}
+              <p className="text-sm text-gray-600 leading-relaxed mb-4 transition-colors duration-300 group-hover:text-gray-700">
                 {section.description}
               </p>
-              <div className="mt-4 flex items-center text-xs text-gray-500">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-                Active
+              
+              {/* Status Indicator with Pulse */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-xs text-gray-500">
+                  <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full mr-2 animate-pulse shadow-sm shadow-emerald-400/50 group-hover:animate-bounce" />
+                  <span className="font-medium group-hover:text-emerald-600 transition-colors">Active</span>
+                </div>
+                
+                {/* Arrow Indicator */}
+                <div className="w-6 h-6 rounded-full bg-gray-100 group-hover:bg-gray-200 flex items-center justify-center transition-all duration-300 group-hover:translate-x-1">
+                  <svg className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
+              
+              {/* Animated Bottom Border */}
+              <div className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${section.color} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left rounded-full`} />
             </CardContent>
+            
+            {/* Floating Particles Effect */}
+            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+              <div className="w-1 h-1 bg-white rounded-full animate-bounce delay-100" />
+              <div className="w-1 h-1 bg-white rounded-full animate-bounce delay-200 mt-1 ml-2" />
+              <div className="w-1 h-1 bg-white rounded-full animate-bounce delay-300 mt-1" />
+            </div>
           </Card>
         );
       })}

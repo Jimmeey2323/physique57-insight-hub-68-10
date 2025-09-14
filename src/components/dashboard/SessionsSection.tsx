@@ -17,6 +17,7 @@ import { formatNumber } from '@/utils/formatters';
 import { SourceDataModal } from '@/components/ui/SourceDataModal';
 import { useFilteredSessionsData } from '@/hooks/useFilteredSessionsData';
 import { SessionsFilterSection } from './SessionsFilterSection';
+import { AdvancedExportButton } from '@/components/ui/AdvancedExportButton';
 
 const locations = [
   { id: 'all', name: 'All Locations', fullName: 'All Locations' },
@@ -73,19 +74,35 @@ export const SessionsSection: React.FC = () => {
     });
   }, [allFilteredData, activeLocation]);
 
-  // Memoized metrics calculation
+  // Memoized metrics calculation - Top metrics from each location
   const headerMetrics = useMemo(() => {
-    const totalSessions = filteredData.length;
-    const totalAttendance = filteredData.reduce((sum, session) => sum + (session.checkedInCount || 0), 0);
-    const avgFillRate = filteredData.length > 0 ? 
-      Math.round(filteredData.reduce((sum, session) => sum + (session.fillPercentage || 0), 0) / filteredData.length) : 0;
+    const locationMetrics = locations.slice(1).map(location => { // Skip 'all' location
+      const locationData = (data || []).filter(session => {
+        const sessionLoc = session.location?.toLowerCase() || '';
+        const targetLoc = location.fullName.toLowerCase();
+        
+        if (location.id === 'kwality' && sessionLoc.includes('kwality')) return true;
+        if (location.id === 'supreme' && sessionLoc.includes('supreme')) return true;
+        if (location.id === 'kenkere' && sessionLoc.includes('kenkere')) return true;
+        
+        return session.location === location.fullName;
+      });
 
-    return {
-      totalSessions: formatNumber(totalSessions),
-      totalAttendance: totalAttendance.toLocaleString(),
-      avgFillRate: `${avgFillRate}%`
-    };
-  }, [filteredData]);
+      const totalSessions = locationData.length;
+      const totalAttendance = locationData.reduce((sum, session) => sum + (session.checkedInCount || 0), 0);
+      const avgFillRate = locationData.length > 0 ? 
+        Math.round(locationData.reduce((sum, session) => sum + (session.fillPercentage || 0), 0) / locationData.length) : 0;
+
+      return {
+        location: location.name.split(',')[0], // Get first part of name
+        sessions: formatNumber(totalSessions),
+        attendance: totalAttendance.toLocaleString(),
+        fillRate: `${avgFillRate}%`
+      };
+    });
+
+    return locationMetrics;
+  }, [data]);
 
   const handleLocationChange = useCallback((value: string) => {
     setActiveLocation(value);
@@ -124,7 +141,7 @@ export const SessionsSection: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-[500px]">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-indigo-600/20" />
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,_rgba(120,119,198,0.3),_transparent_50%)]" />
@@ -132,9 +149,9 @@ export const SessionsSection: React.FC = () => {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_40%,_rgba(120,119,198,0.2),_transparent_50%)]" />
         </div>
         
-        <div className="relative px-8 py-16">
+        <div className="relative px-8 py-20">
           <div className="max-w-7xl mx-auto">
-            {/* Dashboard Button */}
+            {/* Dashboard Button and Export Button */}
             <div className="flex items-center justify-between mb-8">
               <Button 
                 onClick={() => navigate('/')} 
@@ -145,6 +162,12 @@ export const SessionsSection: React.FC = () => {
                 <Home className="w-4 h-4" />
                 Dashboard
               </Button>
+              <AdvancedExportButton
+                sessionsData={filteredData as any}
+                defaultFileName="sessions-data"
+                variant="outline"
+                size="sm"
+              />
             </div>
             
             <div className="text-center space-y-6">
@@ -161,25 +184,31 @@ export const SessionsSection: React.FC = () => {
                 Comprehensive analysis of class performance, attendance patterns, and operational insights across all studio locations
               </p>
               
-              {/* Optimized Key Metrics Display */}
-              <div className="flex items-center justify-center gap-12 mt-12">
-                <MetricDisplay 
-                  title="Total Sessions"
-                  value={headerMetrics.totalSessions}
-                  description="Total Sessions"
-                />
-                <div className="w-px h-16 bg-white/20" />
-                <MetricDisplay 
-                  title="Total Attendance"
-                  value={headerMetrics.totalAttendance}
-                  description="Total Attendance"
-                />
-                <div className="w-px h-16 bg-white/20" />
-                <MetricDisplay 
-                  title="Average Fill Rate"
-                  value={headerMetrics.avgFillRate}
-                  description="Avg Fill Rate"
-                />
+              {/* Top Location Metrics Display */}
+              <div className="flex items-center justify-center gap-12 mt-16">
+                {headerMetrics.map((metric, index) => (
+                  <React.Fragment key={metric.location}>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-white mb-2">{metric.sessions}</div>
+                      <div className="text-sm text-slate-300 font-medium">{metric.location}</div>
+                      <div className="text-xs text-slate-400">Sessions</div>
+                    </div>
+                    {index < headerMetrics.length - 1 && <div className="w-px h-16 bg-white/20" />}
+                  </React.Fragment>
+                ))}
+              </div>
+              
+              {/* Secondary metrics row */}
+              <div className="flex items-center justify-center gap-12 mt-8">
+                {headerMetrics.map((metric, index) => (
+                  <React.Fragment key={`attendance-${metric.location}`}>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-white/90 mb-1">{metric.attendance}</div>
+                      <div className="text-xs text-slate-400">Total Attendance</div>
+                    </div>
+                    {index < headerMetrics.length - 1 && <div className="w-px h-12 bg-white/20" />}
+                  </React.Fragment>
+                ))}
               </div>
             </div>
           </div>

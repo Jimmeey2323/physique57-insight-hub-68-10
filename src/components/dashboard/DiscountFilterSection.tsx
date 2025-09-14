@@ -78,12 +78,12 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
   if (isCollapsed) {
     return (
       <div className="w-full">
-        <div className="flex items-center justify-between p-4 bg-gradient-to-br from-white via-orange-50/30 to-white rounded-lg border shadow-sm">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-br from-white via-indigo-50/30 to-white rounded-lg border shadow-sm">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-orange-600" />
+            <Filter className="w-4 h-4 text-indigo-600" />
             <span className="text-sm font-medium text-slate-700">Discount Filters</span>
             {hasActiveFilters && (
-              <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
+              <Badge variant="secondary" className="text-xs bg-indigo-100 text-indigo-700">
                 {[selectedLocation, selectedCategory, selectedProduct, selectedSoldBy, selectedPaymentMethod]
                   .filter(f => f !== 'all').length + 
                  [minDiscountAmount, maxDiscountAmount, minDiscountPercent, maxDiscountPercent]
@@ -96,7 +96,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
             variant="ghost"
             size="sm"
             onClick={onToggleCollapse}
-            className="text-orange-600 hover:text-orange-700"
+            className="text-indigo-600 hover:text-indigo-700"
           >
             Show Filters
           </Button>
@@ -107,10 +107,10 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
 
   return (
     <div className="w-full">
-      <div className="bg-gradient-to-br from-white via-orange-50/30 to-white rounded-lg border shadow-sm p-6">
+      <div className="bg-gradient-to-br from-white via-indigo-50/30 to-white rounded-lg border shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-orange-600" />
+            <Filter className="w-5 h-5 text-indigo-600" />
             <h3 className="text-lg font-bold text-slate-800">Discount Filters & Analytics</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
               variant="ghost"
               size="sm"
               onClick={onToggleCollapse}
-              className="text-orange-600 hover:text-orange-700"
+              className="text-indigo-600 hover:text-indigo-700"
             >
               Hide Filters
             </Button>
@@ -140,7 +140,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-orange-600" />
+              <MapPin className="w-4 h-4 text-indigo-600" />
               Location
             </label>
             <Select value={selectedLocation} onValueChange={setSelectedLocation}>
@@ -160,7 +160,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <Package className="w-4 h-4 text-orange-600" />
+              <Package className="w-4 h-4 text-indigo-600" />
               Category
             </label>
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -180,7 +180,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <Package className="w-4 h-4 text-orange-600" />
+              <Package className="w-4 h-4 text-indigo-600" />
               Product
             </label>
             <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -200,7 +200,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <User className="w-4 h-4 text-orange-600" />
+              <User className="w-4 h-4 text-indigo-600" />
               Sold By
             </label>
             <Select value={selectedSoldBy} onValueChange={setSelectedSoldBy}>
@@ -220,7 +220,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-orange-600" />
+              <CreditCard className="w-4 h-4 text-indigo-600" />
               Payment Method
             </label>
             <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
@@ -240,7 +240,7 @@ export const DiscountFilterSection: React.FC<DiscountFilterSectionProps> = ({
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-orange-600" />
+              <Calendar className="w-4 h-4 text-indigo-600" />
               Date Range
             </label>
             <DatePickerWithRange 

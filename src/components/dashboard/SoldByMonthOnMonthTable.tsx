@@ -57,6 +57,9 @@ export const SoldByMonthOnMonthTable: React.FC<SoldByMonthOnMonthTableProps> = (
     const totalTransactions = items.length;
     const uniqueMembers = new Set(items.map(item => item.memberId)).size;
     const totalUnits = items.length; // Each sale item is a unit
+    const totalDiscount = items.reduce((sum, item) => sum + (item.discountAmount || 0), 0);
+    const avgDiscountPercentage = items.length > 0 ? 
+      items.reduce((sum, item) => sum + (item.discountPercentage || 0), 0) / items.length : 0;
 
     switch (metric) {
       case 'revenue':
@@ -75,8 +78,10 @@ export const SoldByMonthOnMonthTable: React.FC<SoldByMonthOnMonthTableProps> = (
         return uniqueMembers > 0 ? totalRevenue / uniqueMembers : 0;
       case 'upt':
         return totalTransactions > 0 ? totalUnits / totalTransactions : 0;
-      case 'vat':
-        return items.reduce((sum, item) => sum + (item.paymentVAT || 0), 0);
+      case 'discountValue':
+        return totalDiscount;
+      case 'discountPercentage':
+        return avgDiscountPercentage;
       default:
         return 0;
     }
@@ -85,7 +90,7 @@ export const SoldByMonthOnMonthTable: React.FC<SoldByMonthOnMonthTableProps> = (
   const formatMetricValue = (value: number, metric: YearOnYearMetricType) => {
     switch (metric) {
       case 'revenue':
-      case 'vat':
+      case 'discountValue':
         return formatCurrency(value);
       case 'atv':
       case 'auv':
@@ -98,6 +103,8 @@ export const SoldByMonthOnMonthTable: React.FC<SoldByMonthOnMonthTableProps> = (
         return formatNumber(value);
       case 'upt':
         return value.toFixed(1);
+      case 'discountPercentage':
+        return `${value.toFixed(1)}%`;
       // 1 decimal
       default:
         return formatNumber(value);
@@ -258,6 +265,7 @@ export const SoldByMonthOnMonthTable: React.FC<SoldByMonthOnMonthTableProps> = (
             <thead className="bg-gradient-to-r from-blue-700 to-blue-900 text-white font-semibold text-sm uppercase tracking-wider sticky top-0 z-20">
               <tr>
                 <th className="text-white font-semibold uppercase tracking-wider px-6 py-3 text-left rounded-tl-lg sticky left-0 bg-blue-800 z-30">Sales Associate</th>
+                <th className="text-white font-semibold text-xs uppercase tracking-wider px-3 py-2 bg-blue-800 min-w-24">Contribution %</th>
                 {monthlyData.map(({
                 key,
                 display
@@ -276,6 +284,9 @@ export const SoldByMonthOnMonthTable: React.FC<SoldByMonthOnMonthTableProps> = (
                       <span className="font-bold text-slate-700">#{index + 1}</span>
                       {getSoldByBadge(item.soldBy)}
                     </div>
+                  </td>
+                  <td className="px-3 py-3 text-center text-sm text-gray-900 font-mono">
+                    {(item.metricValue / totalsRow.metricValue * 100).toFixed(1)}%
                   </td>
                   {monthlyData.map(({
                 key

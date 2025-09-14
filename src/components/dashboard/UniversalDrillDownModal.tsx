@@ -25,54 +25,79 @@ export const UniversalDrillDownModal: React.FC<UniversalDrillDownModalProps> = (
 }) => {
   // Filter related data based on the selected item
   const filteredData = useMemo(() => {
+    // First, check if we already have pre-filtered specific data
+    if (data?.filteredTransactionData && data.filteredTransactionData.length > 0) {
+      console.log(`UniversalDrillDownModal: Using pre-filtered data with ${data.filteredTransactionData.length} transactions`);
+      return data.filteredTransactionData;
+    }
+    
+    if (data?.rawData && data.rawData.length > 0) {
+      console.log(`UniversalDrillDownModal: Using raw data with ${data.rawData.length} transactions`);
+      return data.rawData;
+    }
+    
     if (!data || !relatedData) return [];
     
+    // Fallback to filtering relatedData based on the selected item
+    let filtered = [];
     switch (type) {
       case 'product':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.paymentItem === data.name || 
           item.cleanedProduct === data.name ||
           item.product === data.name
         );
+        break;
       case 'category':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.cleanedCategory === data.name || 
           item.category === data.name
         );
+        break;
       case 'member':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.customerName === data.name ||
           item.memberId === data.memberId
         );
+        break;
       case 'seller':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.soldBy === data.name
         );
+        break;
       case 'trainer':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.teacherName === data.name ||
           item.Trainer === data.name ||
           item.trainerName === data.name
         );
+        break;
       case 'location':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.calculatedLocation === data.name ||
           item.location === data.name ||
           item.center === data.name
         );
+        break;
       case 'lead':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.id === data.id || 
           item.memberId === data.memberId
         );
+        break;
       case 'client':
-        return relatedData.filter(item => 
+        filtered = relatedData.filter(item => 
           item.memberId === data.memberId ||
           item.firstName === data.firstName
         );
+        break;
       default:
-        return relatedData.slice(0, 100);
+        filtered = relatedData.slice(0, 100);
+        break;
     }
+    
+    console.log(`UniversalDrillDownModal: Filtered ${filtered.length} transactions from ${relatedData.length} total`);
+    return filtered;
   }, [data, relatedData, type]);
 
   // Generate summary metrics

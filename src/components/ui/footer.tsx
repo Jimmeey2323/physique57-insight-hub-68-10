@@ -4,7 +4,8 @@ export const Footer: React.FC = () => {
   return (
     <footer className="relative h-16 overflow-hidden font-mono text-xs tracking-wide text-slate-400">
       {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-indigo-900 to-purple-900" />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800 to-gray-900" />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-950/30 via-transparent to-purple-950/20" />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 h-full flex items-center justify-center">

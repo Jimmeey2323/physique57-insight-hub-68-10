@@ -19,15 +19,19 @@ export interface SessionData {
   time: string;
   totalPaid: number;
   nonPaidCount: number;
-  uniqueId: string;
+  uniqueId1: string;
+  uniqueId2: string;
   checkedInsWithMemberships: number;
   checkedInsWithPackages: number;
   checkedInsWithIntroOffers: number;
   checkedInsWithSingleClasses: number;
   classType: string;
   cleanedClass: string;
+  classes: number;
   fillPercentage?: number;
   revenue?: number;
+  // Legacy field for backward compatibility
+  uniqueId?: string;
 }
 
 const GOOGLE_CONFIG = {
@@ -123,17 +127,21 @@ export const useSessionsData = () => {
           date: row[12] || '',
           dayOfWeek: row[13] || '',
           time: row[14] || '',
-          totalPaid: parseNumericValue(row[15]),
+          totalPaid: parseNumericValue(row[15]), // Revenue column
           nonPaidCount: parseNumericValue(row[16]),
-          uniqueId: row[17] || '',
-          checkedInsWithMemberships: parseNumericValue(row[19]),
-          checkedInsWithPackages: parseNumericValue(row[20]),
-          checkedInsWithIntroOffers: parseNumericValue(row[21]),
-          checkedInsWithSingleClasses: parseNumericValue(row[22]),
-          classType: row[23] || '',
-          cleanedClass: row[24] || '',
+          uniqueId1: row[17] || '',
+          uniqueId2: row[18] || '',
+          checkedInsWithMemberships: parseNumericValue(row[19]), // Memberships
+          checkedInsWithPackages: parseNumericValue(row[20]), // Packages
+          checkedInsWithIntroOffers: parseNumericValue(row[21]), // IntroOffers
+          checkedInsWithSingleClasses: parseNumericValue(row[22]), // SingleClasses
+          classType: row[23] || '', // Type
+          cleanedClass: row[24] || '', // Class
+          classes: parseNumericValue(row[25]), // Classes
           fillPercentage,
-          revenue: parseNumericValue(row[15])
+          revenue: parseNumericValue(row[15]),
+          // Legacy field for backward compatibility
+          uniqueId: row[17] || ''
         };
       });
 

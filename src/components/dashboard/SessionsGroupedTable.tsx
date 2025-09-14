@@ -346,30 +346,10 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleSort('classAverage')}
-                          className="h-6 p-0 font-semibold"
-                        >
-                          Class Average
-                          {sortField === 'classAverage' && (
-                            sortDirection === 'asc' ? <SortAsc className="ml-1 h-3 w-3" /> : <SortDesc className="ml-1 h-3 w-3" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Average attendees per session</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="text-center min-w-24">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
                           onClick={() => handleSort('totalAttendees')}
                           className="h-6 p-0 font-semibold"
                         >
-                          Total Attendees
+                          Total Attendance
                           {sortField === 'totalAttendees' && (
                             sortDirection === 'asc' ? <SortAsc className="ml-1 h-3 w-3" /> : <SortDesc className="ml-1 h-3 w-3" />
                           )}
@@ -440,7 +420,7 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="text-center min-w-24">
+                  <TableHead className="text-center min-w-32">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -460,7 +440,7 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="text-center min-w-24">
+                  <TableHead className="text-center min-w-32">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -476,11 +456,11 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Total complimentary attendees</p>
+                        <p>Total complimentary entries</p>
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="text-center min-w-24">
+                  <TableHead className="text-center min-w-32">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -496,12 +476,18 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Total non-paid attendees</p>
+                        <p>Total non-paid entries</p>
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="text-center min-w-20">
-                    Actions
+                  <TableHead className="text-center min-w-24">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 p-0 font-semibold"
+                    >
+                      Actions
+                    </Button>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -542,34 +528,38 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                             {group.occurrences}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center h-12 py-2 text-sm font-bold text-blue-600">
-                          {group.classAverage.toFixed(1)}
-                        </TableCell>
                         <TableCell className="text-center h-12 py-2 text-sm font-medium">
                           {formatNumber(group.totalAttendees)}
                         </TableCell>
-                        <TableCell className="text-center h-12 py-2 text-sm font-medium">
-                          <Badge 
-                            variant={group.avgFillRate > 80 ? 'default' : group.avgFillRate > 60 ? 'secondary' : 'outline'}
-                            className={group.avgFillRate > 80 ? 'bg-green-100 text-green-700' : group.avgFillRate > 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}
-                          >
+                        <TableCell className="text-center h-12 py-2">
+                          <Badge className={
+                            group.avgFillRate >= 80 ? 'bg-green-100 text-green-800' :
+                            group.avgFillRate >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }>
                             {group.avgFillRate.toFixed(1)}%
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center h-12 py-2 text-sm font-medium">
+                        <TableCell className="text-center h-12 py-2 text-sm font-medium text-green-700">
                           {formatCurrency(group.totalRevenue)}
                         </TableCell>
-                        <TableCell className="text-center h-12 py-2 text-sm font-medium">
+                        <TableCell className="text-center h-12 py-2 text-sm font-medium text-blue-700">
                           {formatCurrency(group.avgRevenue)}
                         </TableCell>
                         <TableCell className="text-center h-12 py-2 text-sm font-medium">
-                          {formatNumber(group.lateCancellations)}
+                          <Badge variant={group.lateCancellations > 10 ? 'destructive' : 'secondary'}>
+                            {group.lateCancellations}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center h-12 py-2 text-sm font-medium">
-                          {formatNumber(group.complimentaryCount)}
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                            {group.complimentaryCount}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center h-12 py-2 text-sm font-medium">
-                          {formatNumber(group.nonPaidCount)}
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700">
+                            {group.nonPaidCount}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center h-12 py-2">
                           <Button
@@ -579,66 +569,40 @@ export const SessionsGroupedTable: React.FC<SessionsGroupedTableProps> = ({ data
                               e.stopPropagation();
                               showDrillDown(group.name);
                             }}
-                            className="h-8 w-8 p-0 hover:bg-blue-100"
+                            className="h-8 px-3 text-xs bg-gray-100 hover:bg-gray-200"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="w-3 h-3 mr-1" />
+                            Details
                           </Button>
                         </TableCell>
                       </TableRow>
                       
-                      {expandedGroups.has(group.name) && group.sessions.map((session, index) => (
-                        <TableRow key={`${group.name}-${index}`} className="bg-gradient-to-r from-blue-50/50 to-purple-50/50 hover:from-blue-100/50 hover:to-purple-100/50">
-                          <TableCell className="sticky left-0 bg-blue-50/50 z-10 border-r h-10 py-1 pl-12">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-3 h-3 text-blue-500" />
-                              <span className="text-xs text-gray-700 truncate font-medium">
-                                {session.sessionName} - {session.date}
-                              </span>
+                      {expandedGroups.has(group.name) && (
+                        <TableRow>
+                          <TableCell colSpan={getDisplayColumns().length + 9} className="bg-gradient-to-r from-blue-50 to-purple-50 p-6">
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <div className="text-sm text-gray-600">Average Attendance</div>
+                                  <div className="text-xl font-bold text-blue-600">{group.classAverage.toFixed(1)}</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <div className="text-sm text-gray-600">Total Capacity</div>
+                                  <div className="text-xl font-bold text-gray-800">{formatNumber(group.totalCapacity)}</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <div className="text-sm text-gray-600">Memberships Used</div>
+                                  <div className="text-xl font-bold text-green-600">{formatNumber(group.totalMemberships)}</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <div className="text-sm text-gray-600">Packages Used</div>
+                                  <div className="text-xl font-bold text-purple-600">{formatNumber(group.totalPackages)}</div>
+                                </div>
+                              </div>
                             </div>
                           </TableCell>
-                          {displayColumns.map(col => (
-                            <TableCell key={col.key} className="text-center h-10 py-1 text-xs text-gray-600">
-                              <Badge variant="outline" className="text-xs">
-                                {session[col.key as keyof SessionData] || '-'}
-                              </Badge>
-                            </TableCell>
-                          ))}
-                          <TableCell className="text-center h-10 py-1 text-xs text-gray-600">
-                            1
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs font-semibold text-blue-600">
-                            {session.checkedInCount}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            {session.checkedInCount}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            <Badge variant="outline" className="text-xs">
-                              {session.fillPercentage?.toFixed(1)}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            {formatCurrency(session.totalPaid)}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            {formatCurrency(session.totalPaid)}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            {session.lateCancelledCount}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            {session.complimentaryCount}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1 text-xs">
-                            {session.nonPaidCount}
-                          </TableCell>
-                          <TableCell className="text-center h-10 py-1">
-                            <Badge variant="outline" className="text-xs">
-                              Detail
-                            </Badge>
-                          </TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </React.Fragment>
                   );
                 })}

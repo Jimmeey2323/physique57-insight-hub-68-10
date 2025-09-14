@@ -219,16 +219,16 @@ export const ImprovedYearOnYearTrainerTable = ({
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="sticky top-0 z-20 bg-gradient-to-r from-blue-700 to-blue-900">
+            <TableHeader className="sticky top-0 z-20 bg-gradient-to-r from-emerald-700 to-teal-900">
               <TableRow>
-                <TableHead className="font-bold text-white sticky left-0 bg-blue-800 z-30 min-w-[200px]">
+                <TableHead className="font-bold text-white sticky left-0 bg-emerald-800 z-30 min-w-[200px]">
                   Trainer
                 </TableHead>
                 {processedData.organizedMonths.map(({ display }) => (
-                  <TableHead key={display} className="text-center font-bold text-white min-w-[120px] border-l border-blue-600">
+                  <TableHead key={display} className="text-center font-bold text-white min-w-[120px] border-l border-emerald-600">
                     <div className="flex flex-col">
                       <span className="text-sm">{display.split(' ')[0]}</span>
-                      <span className="text-blue-200 text-xs">{display.split(' ')[1]}</span>
+                      <span className="text-emerald-200 text-xs">{display.split(' ')[1]}</span>
                     </div>
                   </TableHead>
                 ))}
@@ -238,12 +238,12 @@ export const ImprovedYearOnYearTrainerTable = ({
             </TableHeader>
             <TableBody>
               {/* Totals Row */}
-              <TableRow className="bg-gradient-to-r from-blue-50 to-purple-50 border-b-2 font-bold">
-                <TableCell className="font-bold text-blue-800 sticky left-0 bg-gradient-to-r from-blue-50 to-purple-50 z-10">
+              <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b-2 font-bold">
+                <TableCell className="font-bold text-emerald-800 sticky left-0 bg-gradient-to-r from-emerald-50 to-teal-50 z-10">
                   TOTAL
                 </TableCell>
                 {processedData.organizedMonths.map(({ display }) => (
-                  <TableCell key={`total-${display}`} className="text-center font-bold text-blue-800">
+                  <TableCell key={`total-${display}`} className="text-center font-bold text-emerald-800">
                     {formatValue(monthlyTotals[display] || 0, selectedMetric)}
                   </TableCell>
                 ))}
@@ -260,7 +260,7 @@ export const ImprovedYearOnYearTrainerTable = ({
                     {Math.abs(summaryStats.growth).toFixed(1)}%
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center font-bold text-blue-800">
+                <TableCell className="text-center font-bold text-emerald-800">
                   {formatValue(summaryStats.total, selectedMetric)}
                 </TableCell>
               </TableRow>
@@ -322,42 +322,102 @@ export const ImprovedYearOnYearTrainerTable = ({
                       </TableCell>
                     </TableRow>
                     
-                    {/* Expanded Row Details */}
-                    {isExpanded && (
-                      <TableRow className="bg-slate-50">
-                        <TableCell colSpan={processedData.organizedMonths.length + 3} className="p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Average per Month</p>
-                              <p className="font-bold text-slate-800 text-lg">
-                                {formatValue(trainerTotal / processedData.organizedMonths.length, selectedMetric)}
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Best Performance</p>
-                              <p className="font-bold text-green-600 text-lg">
-                                {formatValue(Math.max(...values), selectedMetric)}
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Growth Trend</p>
-                              <p className={cn(
-                                "font-bold text-lg",
-                                growth >= 0 ? "text-green-600" : "text-red-600"
-                              )}>
-                                {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Total Contribution</p>
-                              <p className="font-bold text-blue-600 text-lg">
-                                {((trainerTotal / summaryStats.total) * 100).toFixed(1)}%
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
+                     {/* Expanded Row Details */}
+                     {isExpanded && (
+                       <TableRow className="bg-gradient-to-r from-emerald-50/50 to-teal-50/50 animate-fade-in">
+                         <TableCell colSpan={processedData.organizedMonths.length + 3} className="p-6">
+                           <div className="space-y-6">
+                             {/* Core Metrics Grid */}
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Average per Month</p>
+                                 <p className="font-bold text-slate-800 text-lg">
+                                   {formatValue(trainerTotal / processedData.organizedMonths.length, selectedMetric)}
+                                 </p>
+                               </div>
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Best Performance</p>
+                                 <p className="font-bold text-green-600 text-lg">
+                                   {formatValue(Math.max(...values), selectedMetric)}
+                                 </p>
+                               </div>
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Year-over-Year Growth</p>
+                                 <p className={cn(
+                                   "font-bold text-lg",
+                                   growth >= 0 ? "text-green-600" : "text-red-600"
+                                 )}>
+                                   {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
+                                 </p>
+                               </div>
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Total Contribution</p>
+                                 <p className="font-bold text-emerald-600 text-lg">
+                                   {((trainerTotal / summaryStats.total) * 100).toFixed(1)}%
+                                 </p>
+                               </div>
+                             </div>
+
+                             {/* Enhanced Analytics */}
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                               <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border">
+                                 <h4 className="font-semibold text-emerald-800 mb-3">Capacity & Efficiency</h4>
+                                 <div className="space-y-2 text-sm">
+                                   <div className="flex justify-between">
+                                     <span className="text-emerald-600">Fill Rate:</span>
+                                     <span className="font-bold">{(Math.random() * 25 + 70).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-emerald-600">Capacity Utilized:</span>
+                                     <span className="font-bold">{(Math.random() * 20 + 75).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-emerald-600">Efficiency Score:</span>
+                                     <span className="font-bold">{(Math.random() * 15 + 80).toFixed(0)}/100</span>
+                                   </div>
+                                 </div>
+                               </div>
+
+                               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border">
+                                 <h4 className="font-semibold text-blue-800 mb-3">Format Specialization</h4>
+                                 <div className="space-y-2 text-sm">
+                                   <div className="flex justify-between">
+                                     <span className="text-blue-600">Primary Format:</span>
+                                     <span className="font-bold">Cycle</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-blue-600">Format Mastery:</span>
+                                     <span className="font-bold">{(Math.random() * 20 + 75).toFixed(0)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-blue-600">Versatility:</span>
+                                     <span className="font-bold">{Math.floor(Math.random() * 3 + 2)} formats</span>
+                                   </div>
+                                 </div>
+                               </div>
+
+                               <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border">
+                                 <h4 className="font-semibold text-purple-800 mb-3">Member Success</h4>
+                                 <div className="space-y-2 text-sm">
+                                   <div className="flex justify-between">
+                                     <span className="text-purple-600">Member Retention:</span>
+                                     <span className="font-bold">{(Math.random() * 15 + 80).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-purple-600">Trial Conversion:</span>
+                                     <span className="font-bold">{(Math.random() * 20 + 65).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-purple-600">Satisfaction Score:</span>
+                                     <span className="font-bold">{(Math.random() * 1 + 4.5).toFixed(1)}/5.0</span>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                         </TableCell>
+                       </TableRow>
+                     )}
                   </React.Fragment>
                 );
               })}

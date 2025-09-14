@@ -10,11 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface FunnelMonthOnMonthTableProps {
   data: LeadsData[];
+  onDrillDown?: (title: string, data: LeadsData[], type: string) => void;
 }
 
 type MetricType = 'totalLeads' | 'trialsCompleted' | 'trialsScheduled' | 'proximityIssues' | 'convertedLeads' | 'trialToMemberRate' | 'leadToTrialRate' | 'leadToMemberRate' | 'ltv' | 'avgVisits' | 'pipelineHealth';
 
-export const FunnelMonthOnMonthTable: React.FC<FunnelMonthOnMonthTableProps> = ({ data }) => {
+export const FunnelMonthOnMonthTable: React.FC<FunnelMonthOnMonthTableProps> = ({ data, onDrillDown }) => {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('totalLeads');
 
   // Generate months from current month back to Jan 2024
@@ -239,7 +240,7 @@ const formatValue = (value: any, metric: MetricType) => {
 
   return (
     <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
-      <CardHeader className="bg-gradient-to-r from-blue-600 via-teal-600 to-cyan-600">
+      <CardHeader className="bg-gradient-to-r from-red-600 via-red-700 to-red-800">
         <CardTitle className="text-white flex items-center gap-2 text-lg font-bold">
           <Calendar className="w-5 h-5" />
           Month-on-Month Source Performance
@@ -254,7 +255,7 @@ const formatValue = (value: any, metric: MetricType) => {
                 <TabsTrigger 
                   key={tab.value} 
                   value={tab.value}
-                  className="text-xs p-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  className="text-xs p-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
                 >
                   {tab.label}
                 </TabsTrigger>
@@ -263,7 +264,7 @@ const formatValue = (value: any, metric: MetricType) => {
           </Tabs>
           
           <div className="mt-3 flex items-center gap-2">
-            <Badge variant="outline" className="text-blue-600 border-blue-200">
+            <Badge variant="outline" className="text-red-600 border-red-200">
               <BarChart3 className="w-3 h-3 mr-1" />
               {metricTabs.find(t => t.value === selectedMetric)?.label}
             </Badge>
@@ -284,20 +285,24 @@ const formatValue = (value: any, metric: MetricType) => {
             footerData={totals}
             maxHeight="400px"
             className="rounded-none"
-            headerGradient="from-blue-600 to-teal-600"
+            headerGradient="from-red-600 to-red-700"
+            onRowClick={(row) => {
+              const filteredData = data.filter(lead => lead.source === row.source);
+              onDrillDown?.(`Source: ${row.source} - Month Analysis`, filteredData, 'month-source');
+            }}
           />
         </div>
 
         {/* Summary Section */}
         <div className="p-4 bg-slate-50 border-t">
           <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 text-blue-600" />
+            <BarChart3 className="w-4 h-4 text-red-600" />
             <h3 className="font-semibold text-slate-800 text-sm">Performance Summary</h3>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div>
               <span className="text-slate-600">Top Source (Volume):</span>
-              <div className="font-bold text-blue-600">
+              <div className="font-bold text-red-600">
                 {processedData.length > 0 ? processedData[0].source : 'N/A'}
               </div>
             </div>

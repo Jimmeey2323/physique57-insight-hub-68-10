@@ -13,10 +13,10 @@ export const EnhancedClientConversionMetrics: React.FC<EnhancedClientConversionM
   // Calculate comprehensive metrics
   const totalClients = data.length;
   
-  // Fix new members calculation to match table - count rows where isNew contains "New"
+  // Count new members - only when isNew contains "New" (case sensitive)
   const newMembers = data.filter(client => {
-    const isNewValue = String(client.isNew || '').toLowerCase();
-    return isNewValue.includes('new');
+    const isNewValue = String(client.isNew || '');
+    return isNewValue.includes('New');
   }).length;
   
   const convertedMembers = data.filter(client => client.conversionStatus === 'Converted').length;
@@ -28,6 +28,12 @@ export const EnhancedClientConversionMetrics: React.FC<EnhancedClientConversionM
   
   // Trial to member conversion
   const trialToMemberConversion = trialsCompleted > 0 ? (convertedMembers / trialsCompleted) * 100 : 0;
+  
+  // Overall conversion rate: Converted/New * 100
+  const overallConversionRate = newMembers > 0 ? (convertedMembers / newMembers) * 100 : 0;
+  
+  // Retention rate: retained from converted members only
+  const retentionRate = convertedMembers > 0 ? (retainedMembers / convertedMembers) * 100 : 0;
   
   const totalLTV = data.reduce((sum, client) => sum + (client.ltv || 0), 0);
   const avgLTV = totalClients > 0 ? totalLTV / totalClients : 0;
@@ -53,11 +59,11 @@ export const EnhancedClientConversionMetrics: React.FC<EnhancedClientConversionM
       change: '+8.3%'
     },
     {
-      title: 'Retained Members',
-      value: formatNumber(retainedMembers),
+      title: 'Retention Rate',
+      value: `${retentionRate.toFixed(1)}%`,
       icon: UserCheck,
       gradient: 'from-purple-500 to-violet-600',
-      description: 'Active retained clients',
+      description: 'Converted to retained rate',
       change: '+15.2%'
     },
     {
@@ -77,11 +83,11 @@ export const EnhancedClientConversionMetrics: React.FC<EnhancedClientConversionM
       change: '+3.1%'
     },
     {
-      title: 'Trial → Member Conv',
-      value: `${trialToMemberConversion.toFixed(1)}%`,
+      title: 'Conversion Rate',
+      value: `${overallConversionRate.toFixed(1)}%`,
       icon: TrendingUp,
       gradient: 'from-pink-500 to-rose-600',
-      description: 'Trial to member conversion',
+      description: 'Converted/New Members',
       change: '+4.8%'
     }
   ];

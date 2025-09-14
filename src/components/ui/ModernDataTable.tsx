@@ -69,33 +69,32 @@ export const ModernDataTable: React.FC<ModernDataTableProps> = ({
   };
 
   return (
-    <div className={cn("relative overflow-auto border border-border rounded-lg bg-background", className)} style={{ maxHeight }}>
+    <div className={cn("relative overflow-auto rounded-xl", className)} style={{ maxHeight }}>
       <Table className="w-full">
         <TableHeader className={cn(
-          stickyHeader && "sticky top-0 z-20"
+          stickyHeader && "sticky top-0 z-20",
+          "bg-gradient-to-r text-primary-foreground border-none shadow-sm",
+          headerGradient
         )}>
-          <TableRow className={cn(
-            "bg-gradient-to-r text-white border-none h-10",
-            headerGradient
-          )}>
+          <TableRow className="border-none h-12">
             {columns.map((column) => (
               <TableHead 
                 key={column.key} 
                 className={cn(
-                  "font-bold text-white h-10 px-3 text-xs whitespace-nowrap",
+                  "font-bold h-12 px-4 text-sm whitespace-nowrap text-primary-foreground",
                   column.align === 'center' && 'text-center',
                   column.align === 'right' && 'text-right',
-                  column.sortable && 'cursor-pointer hover:bg-white/10',
+                  column.sortable && 'cursor-pointer hover:bg-primary-foreground/10 transition-colors',
                   column.className
                 )}
                 onClick={() => handleSort(column)}
               >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   {column.header}
                   {column.sortable && sortField === column.key && (
                     sortDirection === 'asc' ? 
-                      <ChevronUp className="w-3 h-3" /> : 
-                      <ChevronDown className="w-3 h-3" />
+                      <ChevronUp className="w-4 h-4" /> : 
+                      <ChevronDown className="w-4 h-4" />
                   )}
                 </div>
               </TableHead>
@@ -107,8 +106,8 @@ export const ModernDataTable: React.FC<ModernDataTableProps> = ({
             <TableRow 
               key={index} 
               className={cn(
-                "hover:bg-muted/50 transition-colors border-b border-border h-10 max-h-10",
-                onRowClick && "cursor-pointer"
+                "hover:bg-muted/40 transition-all duration-200 h-12 table-row-stripe",
+                onRowClick && "cursor-pointer hover:scale-[1.01] hover:shadow-sm"
               )}
               onClick={() => onRowClick?.(row)}
             >
@@ -116,13 +115,13 @@ export const ModernDataTable: React.FC<ModernDataTableProps> = ({
                 <TableCell 
                   key={column.key}
                   className={cn(
-                    "h-10 max-h-10 px-3 py-1 text-xs font-medium whitespace-nowrap overflow-hidden text-ellipsis",
+                    "h-12 px-4 py-3 text-sm font-medium",
                     column.align === 'center' && 'text-center',
                     column.align === 'right' && 'text-right',
                     column.className
                   )}
                 >
-                  <div className="h-8 flex items-center overflow-hidden">
+                  <div className="flex items-center h-full">
                     {column.render 
                       ? column.render(row[column.key], row)
                       : <span className="truncate">{formatCurrencyValue(row[column.key])}</span>
@@ -134,19 +133,19 @@ export const ModernDataTable: React.FC<ModernDataTableProps> = ({
           ))}
         </TableBody>
         {showFooter && footerData && (
-          <TableFooter className="sticky bottom-0 z-10 bg-slate-900 border-t-2 border-slate-700">
-            <TableRow className="hover:bg-slate-800 h-10 max-h-10 border-none">
+          <TableFooter className="sticky bottom-0 z-10 bg-primary/90 backdrop-blur-sm border-t border-border">
+            <TableRow className="hover:bg-primary/95 h-12 border-none">
               {columns.map((column) => (
                 <TableCell 
                   key={column.key}
                   className={cn(
-                    "font-bold text-white h-10 max-h-10 px-3 py-1 text-xs whitespace-nowrap",
+                    "font-bold text-primary-foreground h-12 px-4 py-3 text-sm",
                     column.align === 'center' && 'text-center',
                     column.align === 'right' && 'text-right',
                     column.className
                   )}
                 >
-                  <div className="h-8 flex items-center overflow-hidden">
+                  <div className="flex items-center h-full">
                     {column.render 
                       ? column.render(footerData[column.key], footerData)
                       : <span className="truncate">{formatCurrencyValue(footerData[column.key])}</span>

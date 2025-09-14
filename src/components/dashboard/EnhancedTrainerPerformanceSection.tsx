@@ -3,14 +3,20 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePayrollData } from '@/hooks/usePayrollData';
-import { ImprovedYearOnYearTrainerTable } from './ImprovedYearOnYearTrainerTable';
+import { TrainerYearOnYearTable } from './TrainerYearOnYearTable';
+import { TrainerPerformanceDetailTable } from './TrainerPerformanceDetailTable';
+import { TrainerEfficiencyAnalysisTable } from './TrainerEfficiencyAnalysisTable';
 import { MonthOnMonthTrainerTable } from './MonthOnMonthTrainerTable';
-import { TrainerDrillDownModal } from './TrainerDrillDownModal';
+import { DynamicTrainerDrillDownModal } from './DynamicTrainerDrillDownModal';
 import { TrainerFilterSection } from './TrainerFilterSection';
 import { TrainerMetricTabs } from './TrainerMetricTabs';
+import { EnhancedTrainerRankings } from './EnhancedTrainerRankings';
+import { EnhancedTrainerMetricCards } from './EnhancedTrainerMetricCards';
+import { AdvancedNotesModal } from '@/components/ui/AdvancedNotesModal';
+import { AdvancedExportButton } from '@/components/ui/AdvancedExportButton';
 import { processTrainerData } from './TrainerDataProcessor';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
-import { Users, Calendar, TrendingUp, AlertCircle, Award, Target, DollarSign, Activity } from 'lucide-react';
+import { Users, Calendar, TrendingUp, AlertCircle, Award, Target, DollarSign, Activity, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
@@ -21,7 +27,11 @@ export const EnhancedTrainerPerformanceSection = () => {
   const [drillDownData, setDrillDownData] = useState<any>(null);
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState('All Locations');
-  const [filters, setFilters] = useState({ location: '', trainer: '', month: '' });
+  const [filters, setFilters] = useState({ 
+    location: '', 
+    trainer: '', 
+    month: '' // Start with no month filter to show all data
+  });
 
   const processedData = useMemo(() => {
     if (!payrollData || payrollData.length === 0) return [];
@@ -196,54 +206,8 @@ export const EnhancedTrainerPerformanceSection = () => {
         />
       </div>
 
-      {/* Metric Cards */}
-      {summaryStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">Active Trainers</CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-900">{summaryStats.totalTrainers}</div>
-              <p className="text-xs text-blue-600">Total instructors</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">Total Sessions</CardTitle>
-              <Activity className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-900">{formatNumber(summaryStats.totalSessions)}</div>
-              <p className="text-xs text-green-600">Classes conducted</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 shadow-xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-900">{formatCurrency(summaryStats.totalRevenue)}</div>
-              <p className="text-xs text-purple-600">Generated revenue</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 shadow-xl">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-700">Avg Class Size</CardTitle>
-              <Target className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{summaryStats.avgClassSize.toFixed(1)}</div>
-              <p className="text-xs text-orange-600">Members per class</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Enhanced Metric Cards */}
+      <EnhancedTrainerMetricCards data={processedData} />
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -290,100 +254,132 @@ export const EnhancedTrainerPerformanceSection = () => {
         </Card>
       </div>
 
-      {/* Top/Bottom Lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-800">
-              <Award className="w-5 h-5" />
-              Top Performers
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topBottomPerformers.top.map((trainer: any, index: number) => (
-              <div key={trainer.name} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-100">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-green-100 text-green-800">#{index + 1}</Badge>
-                  <div>
-                    <div className="font-medium text-green-900">{trainer.name}</div>
-                    <div className="text-sm text-green-600">{trainer.location}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-green-900">{formatCurrency(trainer.totalRevenue)}</div>
-                  <div className="text-sm text-green-600">{formatNumber(trainer.totalSessions)} sessions</div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-50 to-pink-50 border-red-200 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-800">
-              <TrendingUp className="w-5 h-5" />
-              Improvement Opportunities
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topBottomPerformers.bottom.map((trainer: any, index: number) => (
-              <div key={trainer.name} className="flex items-center justify-between p-3 bg-white rounded-lg border border-red-100">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-red-100 text-red-800">#{index + 1}</Badge>
-                  <div>
-                    <div className="font-medium text-red-900">{trainer.name}</div>
-                    <div className="text-sm text-red-600">{trainer.location}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-red-900">{formatCurrency(trainer.totalRevenue)}</div>
-                  <div className="text-sm text-red-600">{formatNumber(trainer.totalSessions)} sessions</div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Enhanced Rankings */}
+      <EnhancedTrainerRankings 
+        data={processedData} 
+        onTrainerClick={handleRowClick}
+      />
 
       {/* Analysis Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1 rounded-xl shadow-sm h-14">
+        <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200 p-1 rounded-xl shadow-sm h-14">
           <TabsTrigger
             value="month-on-month"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-50 data-[state=active]:hover:bg-blue-700"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-50 data-[state=active]:hover:bg-blue-700"
           >
             <Calendar className="w-4 h-4" />
-            Month-on-Month Analysis
+            Month-on-Month
           </TabsTrigger>
           <TabsTrigger
             value="year-on-year"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-50 data-[state=active]:hover:bg-blue-700"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-50 data-[state=active]:hover:bg-emerald-700"
           >
             <TrendingUp className="w-4 h-4" />
-            Year-on-Year Comparison
+            Year-on-Year
+          </TabsTrigger>
+          <TabsTrigger
+            value="efficiency-analysis"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-50 data-[state=active]:hover:bg-orange-700"
+          >
+            <Target className="w-4 h-4" />
+            Efficiency
+          </TabsTrigger>
+          <TabsTrigger
+            value="performance-detail"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-50 data-[state=active]:hover:bg-purple-700"
+          >
+            <Award className="w-4 h-4" />
+            Performance
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="month-on-month" className="space-y-4">
+        <TabsContent value="month-on-month" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <AdvancedExportButton 
+              payrollData={payrollData || []}
+              defaultFileName="month-on-month-trainer-analysis"
+              size="sm"
+              variant="outline"
+            />
+          </div>
           <MonthOnMonthTrainerTable
             data={processedData}
             defaultMetric="totalSessions"
             onRowClick={handleRowClick}
           />
+          <AdvancedNotesModal 
+            pageId="month-on-month-trainer"
+            title="Month-on-Month Analysis Notes"
+          />
         </TabsContent>
 
-        <TabsContent value="year-on-year" className="space-y-4">
-          <ImprovedYearOnYearTrainerTable
+        <TabsContent value="year-on-year" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <AdvancedExportButton 
+              payrollData={payrollData || []}
+              defaultFileName="year-on-year-trainer-analysis"
+              size="sm"
+              variant="outline"
+            />
+          </div>
+          
+          <TrainerYearOnYearTable
             data={processedData}
-            defaultMetric="totalSessions"
             onRowClick={handleRowClick}
+          />
+          
+          <AdvancedNotesModal 
+            pageId="year-on-year-trainer"
+            title="Year-on-Year Analysis Notes"
+          />
+        </TabsContent>
+
+        <TabsContent value="efficiency-analysis" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <AdvancedExportButton 
+              payrollData={payrollData || []}
+              defaultFileName="trainer-efficiency-analysis"
+              size="sm"
+              variant="outline"
+            />
+          </div>
+          
+          <TrainerEfficiencyAnalysisTable
+            data={processedData}
+            onRowClick={handleRowClick}
+          />
+          
+          <AdvancedNotesModal 
+            pageId="efficiency-analysis-trainer"
+            title="Efficiency Analysis Notes"
+          />
+        </TabsContent>
+
+        <TabsContent value="performance-detail" className="space-y-6">
+          <div className="flex justify-end mb-4">
+            <AdvancedExportButton 
+              payrollData={payrollData || []}
+              defaultFileName="trainer-performance-detail"
+              size="sm"
+              variant="outline"
+            />
+          </div>
+          
+          <TrainerPerformanceDetailTable
+            data={processedData}
+            onRowClick={handleRowClick}
+          />
+          
+          <AdvancedNotesModal 
+            pageId="performance-detail-trainer"
+            title="Performance Detail Notes"
           />
         </TabsContent>
       </Tabs>
 
-      {/* Drill Down Modal */}
+      {/* Dynamic Drill Down Modal */}
       {selectedTrainer && drillDownData && (
-        <TrainerDrillDownModal
+        <DynamicTrainerDrillDownModal
           isOpen={!!selectedTrainer}
           onClose={closeDrillDown}
           trainerName={selectedTrainer}

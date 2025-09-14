@@ -52,7 +52,7 @@ export const ExecutiveDiscountsTab: React.FC<ExecutiveDiscountsTabProps> = ({
   // Filter data by location if selected
   const filteredData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    if (selectedLocation === 'all') return data;
+    if (!selectedLocation || selectedLocation === 'all') return data;
     return data.filter(item => item.calculatedLocation === selectedLocation);
   }, [data, selectedLocation]);
 

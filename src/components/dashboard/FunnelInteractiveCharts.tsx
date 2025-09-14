@@ -190,38 +190,55 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
   return (
     <div className="space-y-8">
       {/* Main Chart - Full Width */}
-      <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
+      <Card className="w-full bg-white/95 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white border-0">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <BarChart3 className="w-6 h-6 text-blue-600 animate-pulse" />
-              {chartType === 'source' ? 'Source Analysis' : chartType === 'stage' ? 'Stage Analysis' : 'Timeline Analysis'}
+            <CardTitle className="flex items-center gap-3 text-white text-xl font-bold">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              {chartType === 'source' ? 'Lead Source Analytics' : chartType === 'stage' ? 'Funnel Stage Analytics' : 'Timeline Trend Analysis'}
             </CardTitle>
             
             <div className="flex flex-wrap gap-2">
               <Button
-                variant={chartType === 'source' ? 'default' : 'outline'}
+                variant={chartType === 'source' ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={() => setChartType('source')}
-                className="text-xs"
+                className={cn(
+                  "text-xs font-semibold transition-all duration-200",
+                  chartType === 'source' 
+                    ? "bg-white/30 text-white border-white/40 hover:bg-white/40" 
+                    : "bg-white/10 text-white/80 border-white/20 hover:bg-white/20"
+                )}
               >
                 <Users className="w-3 h-3 mr-1" />
                 Sources
               </Button>
               <Button
-                variant={chartType === 'stage' ? 'default' : 'outline'}
+                variant={chartType === 'stage' ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={() => setChartType('stage')}
-                className="text-xs"
+                className={cn(
+                  "text-xs font-semibold transition-all duration-200",
+                  chartType === 'stage' 
+                    ? "bg-white/30 text-white border-white/40 hover:bg-white/40" 
+                    : "bg-white/10 text-white/80 border-white/20 hover:bg-white/20"
+                )}
               >
                 <Target className="w-3 h-3 mr-1" />
                 Stages
               </Button>
               <Button
-                variant={chartType === 'timeline' ? 'default' : 'outline'}
+                variant={chartType === 'timeline' ? 'secondary' : 'outline'}
                 size="sm"
                 onClick={() => setChartType('timeline')}
-                className="text-xs"
+                className={cn(
+                  "text-xs font-semibold transition-all duration-200",
+                  chartType === 'timeline' 
+                    ? "bg-white/30 text-white border-white/40 hover:bg-white/40" 
+                    : "bg-white/10 text-white/80 border-white/20 hover:bg-white/20"
+                )}
               >
                 <Calendar className="w-3 h-3 mr-1" />
                 Timeline
@@ -231,22 +248,37 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
           
           <div className="flex flex-wrap gap-2 mt-4">
             <Badge 
-              variant={metricType === 'volume' ? 'default' : 'outline'}
-              className="cursor-pointer transition-all duration-200 hover:scale-105"
+              variant={metricType === 'volume' ? 'secondary' : 'outline'}
+              className={cn(
+                "cursor-pointer transition-all duration-200 hover:scale-105",
+                metricType === 'volume' 
+                  ? "bg-white/30 text-white border-white/40" 
+                  : "bg-white/10 text-white/70 border-white/30 hover:bg-white/20"
+              )}
               onClick={() => setMetricType('volume')}
             >
               Volume
             </Badge>
             <Badge 
-              variant={metricType === 'conversion' ? 'default' : 'outline'}
-              className="cursor-pointer transition-all duration-200 hover:scale-105"
+              variant={metricType === 'conversion' ? 'secondary' : 'outline'}
+              className={cn(
+                "cursor-pointer transition-all duration-200 hover:scale-105",
+                metricType === 'conversion' 
+                  ? "bg-white/30 text-white border-white/40" 
+                  : "bg-white/10 text-white/70 border-white/30 hover:bg-white/20"
+              )}
               onClick={() => setMetricType('conversion')}
             >
               Conversion
             </Badge>
             <Badge 
-              variant={metricType === 'ltv' ? 'default' : 'outline'}
-              className="cursor-pointer transition-all duration-200 hover:scale-105"
+              variant={metricType === 'ltv' ? 'secondary' : 'outline'}
+              className={cn(
+                "cursor-pointer transition-all duration-200 hover:scale-105",
+                metricType === 'ltv' 
+                  ? "bg-white/30 text-white border-white/40" 
+                  : "bg-white/10 text-white/70 border-white/30 hover:bg-white/20"
+              )}
               onClick={() => setMetricType('ltv')}
             >
               LTV
@@ -254,33 +286,38 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
           </div>
         </CardHeader>
         
-        <CardContent className="p-8">
-          <div className="h-96">
+        <CardContent className="p-8 bg-gradient-to-br from-slate-50 to-white">
+          <div className="h-96 relative">
+            <div className="absolute top-0 right-0 text-xs text-slate-500 font-medium">
+              {getMetricLabel()}
+            </div>
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'timeline' ? (
                 <LineChart data={chartData}>
                   <defs>
                     <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.4}/>
+                      <stop offset="50%" stopColor="#ea580c" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0.1}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="2 4" stroke="#f1f5f9" />
                   <XAxis 
                     dataKey="name" 
-                    stroke="#64748b"
-                    fontSize={12}
+                    stroke="#475569"
+                    fontSize={11}
+                    fontWeight={500}
                     tickFormatter={(value) => String(value).slice(-5)}
                   />
-                  <YAxis stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#475569" fontSize={11} fontWeight={500} />
                   <Tooltip content={<CustomTooltip />} />
                   <Line 
                     type="monotone" 
                     dataKey={metricType} 
-                    stroke="#3b82f6" 
-                    strokeWidth={3}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 8, fill: '#1d4ed8', stroke: '#white', strokeWidth: 2 }}
+                    stroke="#dc2626" 
+                    strokeWidth={4}
+                    dot={{ fill: '#dc2626', strokeWidth: 3, r: 6 }}
+                    activeDot={{ r: 10, fill: '#b91c1c', stroke: '#ffffff', strokeWidth: 3 }}
                     fill="url(#lineGradient)"
                   />
                 </LineChart>
@@ -288,25 +325,27 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
                 <BarChart data={chartData}>
                   <defs>
                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0.7}/>
+                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.9}/>
+                      <stop offset="50%" stopColor="#ea580c" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0.7}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="2 4" stroke="#f1f5f9" />
                   <XAxis 
                     dataKey="name" 
-                    stroke="#64748b"
-                    fontSize={12}
+                    stroke="#475569"
+                    fontSize={11}
+                    fontWeight={500}
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
-                  <YAxis stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#475569" fontSize={11} fontWeight={500} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
                     dataKey={metricType} 
                     fill="url(#barGradient)"
-                    radius={[6, 6, 0, 0]}
+                    radius={[8, 8, 0, 0]}
                   />
                 </BarChart>
               )}
@@ -315,15 +354,17 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
         </CardContent>
       </Card>
 
-      {/* Pie Chart - Full Width */}
-      <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-          <CardTitle className="flex items-center gap-2 text-slate-800">
-            <PieChartIcon className="w-6 h-6 text-purple-600 animate-pulse" />
+      {/* Enhanced Pie Chart */}
+      <Card className="w-full bg-white/95 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-orange-800 via-red-800 to-red-900 text-white border-0">
+          <CardTitle className="flex items-center gap-3 text-white text-xl font-bold">
+            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+              <PieChartIcon className="w-6 h-6 text-white" />
+            </div>
             Conversion Status Distribution
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-8">
+        <CardContent className="p-8 bg-gradient-to-br from-slate-50 to-white">
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -331,28 +372,29 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={80}
-                  outerRadius={140}
-                  paddingAngle={3}
+                  innerRadius={90}
+                  outerRadius={150}
+                  paddingAngle={4}
                   dataKey="value"
                   animationBegin={0}
-                  animationDuration={1000}
+                  animationDuration={1500}
                 >
                   {pieData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={entry.color}
                       stroke="#ffffff"
-                      strokeWidth={2}
+                      strokeWidth={3}
                     />
                   ))}
                 </Pie>
                 <Tooltip content={<PieTooltip />} />
                 <Legend 
                   verticalAlign="bottom" 
-                  height={60}
+                  height={70}
+                  wrapperStyle={{ fontSize: '14px', fontWeight: 600 }}
                   formatter={(value, entry: any) => (
-                    <span style={{ color: entry.color, fontWeight: 600 }}>
+                    <span style={{ color: entry.color, fontWeight: 700 }}>
                       {value} ({entry.payload.percentage}%)
                     </span>
                   )}

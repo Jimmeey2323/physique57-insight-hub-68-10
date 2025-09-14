@@ -15,6 +15,7 @@ export interface DiscountAnalysisData {
   paymentVat: number;
   paymentItem: string;
   cleanedProduct?: string;
+  cleanedCategory?: string;
   mrpPostTax?: number;
   discountAmount?: number;
   discountPercentage?: number;

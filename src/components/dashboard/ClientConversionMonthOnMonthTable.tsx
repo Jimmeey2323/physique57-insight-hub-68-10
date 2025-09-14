@@ -10,77 +10,136 @@ import { motion } from 'framer-motion';
 
 interface ClientConversionMonthOnMonthTableProps {
   data: NewClientData[];
+  onRowClick?: (monthData: any) => void;
 }
 
-export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOnMonthTableProps> = ({ data }) => {
+export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOnMonthTableProps> = ({ data, onRowClick }) => {
   console.log('MonthOnMonth data:', data.length, 'records');
 
   const monthlyData = React.useMemo(() => {
-    const monthlyStats = data.reduce((acc, client) => {
+    // Generate all months from Jan 2024 to current month regardless of data
+    const generateAllMonths = () => {
+      const months = [];
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Start from current month and go back to Jan 2024
+      for (let year = currentYear; year >= 2024; year--) {
+        const startMonth = year === currentYear ? currentMonth : 11;
+        const endMonth = year === 2024 ? 0 : 0;
+        
+        for (let month = startMonth; month >= endMonth; month--) {
+          const monthKey = `${year}-${(month + 1).toString().padStart(2, '0')}`;
+          const monthName = new Date(year, month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          months.push({ key: monthKey, name: monthName });
+        }
+      }
+      
+      return months;
+    };
+
+    const allMonths = generateAllMonths();
+    
+    // Initialize all months with empty data
+    const monthlyStats = allMonths.reduce((acc, month) => {
+      acc[month.key] = {
+        month: month.name,
+        sortKey: month.key,
+        totalMembers: 0,
+        newMembers: 0,
+        converted: 0,
+        retained: 0,
+        totalLTV: 0,
+        conversionIntervals: [],
+        visitsPostTrial: [],
+        clients: []
+      };
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Process actual data into the pre-initialized months
+    data.forEach(client => {
       const dateStr = client.firstVisitDate;
       let date: Date;
       
       // Handle different date formats consistently
       if (dateStr.includes('/')) {
-        const [day, month, year] = dateStr.split(' ')[0].split('/');
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const parts = dateStr.split(' ')[0].split('/');
+        if (parts.length === 3) {
+          // Try DD/MM/YYYY format first
+          const [day, month, year] = parts;
+          date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          
+          // If invalid, try MM/DD/YYYY format
+          if (isNaN(date.getTime())) {
+            date = new Date(parseInt(year), parseInt(day) - 1, parseInt(month));
+          }
+        } else {
+          date = new Date(dateStr);
+        }
       } else {
         date = new Date(dateStr);
       }
       
       if (isNaN(date.getTime())) {
         console.warn('Invalid date:', dateStr);
-        return acc;
+        return;
       }
       
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       
-      if (!acc[monthKey]) {
-        acc[monthKey] = {
-          month: monthName,
-          sortKey: monthKey,
-          newMembers: 0,
-          converted: 0,
-          retained: 0,
-          totalLTV: 0,
-          conversionSpans: [],
-          visitsPostTrial: []
-        };
+      // Only process if this month exists in our pre-defined range
+      if (monthlyStats[monthKey]) {
+        monthlyStats[monthKey].totalMembers++;
+        monthlyStats[monthKey].clients.push(client);
+        
+        // Count new members - when isNew contains "new" (case insensitive)
+        if ((client.isNew || '').toLowerCase().includes('new')) {
+          monthlyStats[monthKey].newMembers++;
+        }
+        
+        // Count converted - when conversionStatus is exactly "Converted"
+        if (client.conversionStatus === 'Converted') {
+          monthlyStats[monthKey].converted++;
+        }
+        
+        // Count retained - when retentionStatus is exactly "Retained"
+        if (client.retentionStatus === 'Retained') {
+          monthlyStats[monthKey].retained++;
+        }
+        
+        // Sum LTV
+        monthlyStats[monthKey].totalLTV += client.ltv || 0;
+        
+        // Calculate conversion interval (first purchase date - first visit date)
+        if (client.firstPurchase && client.firstVisitDate) {
+          const firstVisitDate = new Date(client.firstVisitDate);
+          const firstPurchaseDate = new Date(client.firstPurchase);
+          
+          if (!isNaN(firstVisitDate.getTime()) && !isNaN(firstPurchaseDate.getTime())) {
+            const intervalDays = Math.ceil((firstPurchaseDate.getTime() - firstVisitDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (intervalDays >= 0) {
+              monthlyStats[monthKey].conversionIntervals.push(intervalDays);
+            }
+          }
+        }
+        
+        if (client.visitsPostTrial && client.visitsPostTrial > 0) {
+          monthlyStats[monthKey].visitsPostTrial.push(client.visitsPostTrial);
+        }
       }
-      
-      acc[monthKey].newMembers++;
-      
-      if (client.conversionStatus === 'Converted') {
-        acc[monthKey].converted++;
-      }
-      
-      if (client.retentionStatus === 'Retained') {
-        acc[monthKey].retained++;
-      }
-      
-      // Sum LTV
-      acc[monthKey].totalLTV += client.ltv || 0;
-      
-      // Collect conversion spans and visits for averages
-      if (client.conversionSpan && client.conversionSpan > 0) {
-        acc[monthKey].conversionSpans.push(client.conversionSpan);
-      }
-      if (client.visitsPostTrial && client.visitsPostTrial > 0) {
-        acc[monthKey].visitsPostTrial.push(client.visitsPostTrial);
-      }
-      
-      return acc;
-    }, {} as Record<string, any>);
+    });
 
     const processed = Object.values(monthlyStats)
       .map((stat: any) => ({
         ...stat,
-        conversionRate: stat.newMembers > 0 ? (stat.converted / stat.newMembers) * 100 : 0,
-        retentionRate: stat.newMembers > 0 ? (stat.retained / stat.newMembers) * 100 : 0,
-        avgLTV: stat.newMembers > 0 ? stat.totalLTV / stat.newMembers : 0,
-        avgConversionSpan: stat.conversionSpans.length > 0 
-          ? stat.conversionSpans.reduce((a: number, b: number) => a + b, 0) / stat.conversionSpans.length 
+        trialsCompleted: stat.visitsPostTrial.length, // trials completed = actual trials with visits
+        conversionRate: stat.newMembers > 0 ? (stat.converted / stat.newMembers) * 100 : 0, // Converted from new members
+        retentionRate: stat.newMembers > 0 ? (stat.retained / stat.newMembers) * 100 : 0, // Retained from new members (corrected)
+        avgLTV: stat.totalMembers > 0 ? stat.totalLTV / stat.totalMembers : 0,
+        avgConversionInterval: stat.conversionIntervals.length > 0 
+          ? stat.conversionIntervals.reduce((a: number, b: number) => a + b, 0) / stat.conversionIntervals.length 
           : 0,
         avgVisitsPostTrial: stat.visitsPostTrial.length > 0
           ? stat.visitsPostTrial.reduce((a: number, b: number) => a + b, 0) / stat.visitsPostTrial.length
@@ -104,14 +163,19 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       )
     },
     {
+      key: 'totalMembers',
+      header: 'Total Members',
+      align: 'center' as const,
+      render: (value: number) => (
+        <span className="text-base font-bold text-blue-600">{formatNumber(value)}</span>
+      )
+    },
+    {
       key: 'newMembers',
       header: 'New Members',
       align: 'center' as const,
       render: (value: number) => (
-        <div className="text-center">
-          <div className="text-lg font-bold text-blue-600">{formatNumber(value)}</div>
-          <div className="text-xs text-slate-500">members</div>
-        </div>
+        <span className="text-base font-bold text-green-600">{formatNumber(value)}</span>
       )
     },
     {
@@ -119,10 +183,7 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Converted',
       align: 'center' as const,
       render: (value: number) => (
-        <div className="text-center">
-          <div className="text-lg font-bold text-green-600">{formatNumber(value)}</div>
-          <div className="text-xs text-slate-500">converted</div>
-        </div>
+        <span className="text-base font-bold text-emerald-600">{formatNumber(value)}</span>
       )
     },
     {
@@ -130,12 +191,9 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Conv. Rate',
       align: 'center' as const,
       render: (value: number) => (
-        <div className="flex items-center justify-center gap-1">
-          {value > 25 ? <TrendingUp className="w-3 h-3 text-green-500" /> : value < 10 ? <TrendingDown className="w-3 h-3 text-red-500" /> : null}
-          <Badge className={`font-bold ${value > 25 ? 'bg-green-100 text-green-800' : value < 10 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
-            {value.toFixed(1)}%
-          </Badge>
-        </div>
+        <span className={`text-base font-bold ${value > 25 ? 'text-green-600' : value < 10 ? 'text-red-600' : 'text-slate-600'}`}>
+          {value.toFixed(1)}%
+        </span>
       )
     },
     {
@@ -143,10 +201,7 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Retained',
       align: 'center' as const,
       render: (value: number) => (
-        <div className="text-center">
-          <div className="text-lg font-bold text-purple-600">{formatNumber(value)}</div>
-          <div className="text-xs text-slate-500">retained</div>
-        </div>
+        <span className="text-base font-bold text-purple-600">{formatNumber(value)}</span>
       )
     },
     {
@@ -154,9 +209,9 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Ret. Rate',
       align: 'center' as const,
       render: (value: number) => (
-        <Badge className={`font-bold ${value > 70 ? 'bg-purple-100 text-purple-800' : value < 40 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+        <span className={`text-base font-bold ${value > 70 ? 'text-purple-600' : value < 40 ? 'text-red-600' : 'text-slate-600'}`}>
           {value.toFixed(1)}%
-        </Badge>
+        </span>
       )
     },
     {
@@ -164,10 +219,7 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Total LTV',
       align: 'right' as const,
       render: (value: number) => (
-        <div className="text-right">
-          <div className="text-lg font-bold text-emerald-600">{formatCurrency(value)}</div>
-          <div className="text-xs text-slate-500">total value</div>
-        </div>
+        <span className="text-base font-bold text-emerald-600">{formatCurrency(value)}</span>
       )
     },
     {
@@ -175,20 +227,15 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Avg LTV',
       align: 'right' as const,
       render: (value: number) => (
-        <div className="text-right">
-          <div className="text-lg font-bold text-emerald-600">{formatCurrency(value)}</div>
-          <div className="text-xs text-slate-500">per client</div>
-        </div>
+        <span className="text-base font-bold text-teal-600">{formatCurrency(value)}</span>
       )
     },
     {
-      key: 'avgConversionSpan',
-      header: 'Avg Conv. Days',
+      key: 'avgConversionInterval',
+      header: 'Conv. Days',
       align: 'center' as const,
       render: (value: number) => (
-        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 font-bold">
-          {Math.round(value)} days
-        </Badge>
+        <span className="text-base font-bold text-orange-600">{Math.round(value)}</span>
       )
     },
     {
@@ -196,9 +243,7 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
       header: 'Avg Visits',
       align: 'center' as const,
       render: (value: number) => (
-        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold">
-          {value.toFixed(1)}
-        </Badge>
+        <span className="text-base font-bold text-blue-600">{value.toFixed(1)}</span>
       )
     }
   ];
@@ -206,15 +251,16 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
   // Calculate totals
   const totals = {
     month: 'TOTAL',
+    totalMembers: monthlyData.reduce((sum, row) => sum + row.totalMembers, 0),
     newMembers: monthlyData.reduce((sum, row) => sum + row.newMembers, 0),
     converted: monthlyData.reduce((sum, row) => sum + row.converted, 0),
     conversionRate: 0,
     retained: monthlyData.reduce((sum, row) => sum + row.retained, 0),
     retentionRate: 0,
     totalLTV: monthlyData.reduce((sum, row) => sum + row.totalLTV, 0),
-    avgLTV: monthlyData.reduce((sum, row) => sum + row.totalLTV, 0) / Math.max(monthlyData.reduce((sum, row) => sum + row.newMembers, 0), 1),
-    avgConversionSpan: monthlyData.reduce((sum, row) => sum + (row.avgConversionSpan * row.newMembers), 0) / Math.max(monthlyData.reduce((sum, row) => sum + row.newMembers, 0), 1),
-    avgVisitsPostTrial: monthlyData.reduce((sum, row) => sum + (row.avgVisitsPostTrial * row.newMembers), 0) / Math.max(monthlyData.reduce((sum, row) => sum + row.newMembers, 0), 1)
+    avgLTV: monthlyData.reduce((sum, row) => sum + row.totalLTV, 0) / Math.max(monthlyData.reduce((sum, row) => sum + row.totalMembers, 0), 1),
+    avgConversionInterval: monthlyData.reduce((sum, row) => sum + (row.avgConversionInterval * row.totalMembers), 0) / Math.max(monthlyData.reduce((sum, row) => sum + row.totalMembers, 0), 1),
+    avgVisitsPostTrial: monthlyData.reduce((sum, row) => sum + (row.avgVisitsPostTrial * row.totalMembers), 0) / Math.max(monthlyData.reduce((sum, row) => sum + row.totalMembers, 0), 1)
   };
   totals.conversionRate = totals.newMembers > 0 ? (totals.converted / totals.newMembers) * 100 : 0;
   totals.retentionRate = totals.newMembers > 0 ? (totals.retained / totals.newMembers) * 100 : 0;
@@ -243,6 +289,7 @@ export const ClientConversionMonthOnMonthTable: React.FC<ClientConversionMonthOn
           showFooter={true}
           footerData={totals}
           maxHeight="600px"
+          onRowClick={onRowClick}
         />
       </CardContent>
     </Card>

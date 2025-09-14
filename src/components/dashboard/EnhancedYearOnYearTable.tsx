@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { SalesData, FilterOptions, YearOnYearMetricType, EnhancedYearOnYearTableProps } from '@/types/dashboard';
 import { YearOnYearMetricTabs } from './YearOnYearMetricTabs';
 import { formatCurrency, formatNumber, formatPercentage } from '@/utils/formatters';
-import { ChevronDown, ChevronRight, RefreshCw, Filter, Calendar, TrendingUp, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight, RefreshCw, Filter, Calendar, TrendingUp, TrendingDown, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,37 +60,44 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
   };
   const getMetricValue = (items: SalesData[], metric: YearOnYearMetricType) => {
     if (!items.length) return 0;
+    const totalRevenue = items.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
+    const totalTransactions = items.length;
+    const uniqueMembers = new Set(items.map(item => item.memberId)).size;
+    const totalUnits = items.length;
+    const totalDiscount = items.reduce((sum, item) => sum + (item.discountAmount || 0), 0);
+    const avgDiscountPercentage = items.length > 0 ? 
+      items.reduce((sum, item) => sum + (item.discountPercentage || 0), 0) / items.length : 0;
+
     switch (metric) {
       case 'revenue':
-        return items.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
+        return totalRevenue;
       case 'transactions':
-        return items.length;
+        return totalTransactions;
       case 'members':
-        return new Set(items.map(item => item.memberId)).size;
+        return uniqueMembers;
       case 'units':
-        return items.length;
+        return totalUnits;
       // Each sale item is one unit
       case 'atv':
-        const totalRevenue = items.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
-        return items.length > 0 ? totalRevenue / items.length : 0;
+        return totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
       case 'auv':
-        const revenue = items.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
-        const uniqueMembers = new Set(items.map(item => item.memberId)).size;
-        return uniqueMembers > 0 ? revenue / uniqueMembers : 0;
+        return uniqueMembers > 0 ? totalRevenue / uniqueMembers : 0;
       case 'asv':
-        const sessionRevenue = items.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
-        const sessions = new Set(items.map(item => item.saleItemId)).size;
-        return sessions > 0 ? sessionRevenue / sessions : 0;
+        return new Set(items.map(item => item.saleItemId)).size > 0 ? totalRevenue / new Set(items.map(item => item.saleItemId)).size : 0;
       case 'upt':
         const totalItems = items.length;
-        const totalTransactions = new Set(items.map(item => item.paymentTransactionId)).size;
-        return totalTransactions > 0 ? totalItems / totalTransactions : 0;
+        const totalTransactionsCount = new Set(items.map(item => item.paymentTransactionId)).size;
+        return totalTransactionsCount > 0 ? totalItems / totalTransactionsCount : 0;
       case 'vat':
         return items.reduce((sum, item) => sum + (item.paymentVAT || 0), 0);
       case 'netRevenue':
-        const gross = items.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
+        const gross = totalRevenue;
         const vat = items.reduce((sum, item) => sum + (item.paymentVAT || 0), 0);
         return gross - vat;
+      case 'discountValue':
+        return totalDiscount;
+      case 'discountPercentage':
+        return avgDiscountPercentage;
       default:
         return 0;
     }
@@ -103,6 +110,7 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
       case 'atv':
       case 'vat':
       case 'netRevenue':
+      case 'discountValue':
         return formatCurrency(value);
       case 'transactions':
       case 'members':
@@ -110,9 +118,17 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
         return formatNumber(value);
       case 'upt':
         return value.toFixed(2);
+      case 'discountPercentage':
+        return `${value.toFixed(1)}%`;
       default:
         return formatNumber(value);
     }
+  };
+
+  const getGrowthPercentage = (current: number, previous: number) => {
+    if (previous === 0 && current === 0) return null;
+    if (previous === 0) return '+100';
+    return ((current - previous) / previous * 100).toFixed(1);
   };
 
   // Get all data for historic comparison (include 2024 data regardless of filters)
@@ -324,9 +340,9 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border-t border-gray-200 rounded-lg">
-            <thead className="bg-gradient-to-r from-purple-700 to-purple-900 text-white font-semibold text-sm uppercase tracking-wider px-4 py-2 sticky top-0 z-20">
-              <tr className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white font-semibold text-sm uppercase tracking-wider px-4 py-2 rounded-md bg-blue-950">
-                <th className="bg-gradient-to-r from-blue-800 to-blue-800 text-white font-semibold text-sm uppercase tracking-wider px-4 py-2 rounded-none">
+            <thead className="bg-gradient-to-r from-purple-700 to-purple-900 text-white font-semibold text-sm uppercase tracking-wider sticky top-0 z-30">
+              <tr className="bg-gradient-to-r from-blue-800 to-indigo-900 text-white font-semibold text-sm uppercase tracking-wider">
+                <th className="bg-gradient-to-r from-blue-800 to-blue-800 text-white font-semibold text-sm uppercase tracking-wider px-4 py-2 sticky left-0 z-40">
                   Product/Category
                 </th>
                 {monthlyData.map(({
@@ -346,7 +362,7 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
             <tbody>
               {processedData.map(categoryGroup => <React.Fragment key={categoryGroup.category}>
                   <tr onClick={() => handleGroupToggle(categoryGroup.category)} className="bg-white hover:bg-gray-100 cursor-pointer border-b border-gray-200 group transition-colors duration-200 ease-in-out">
-                    <td className="py-4 font-semibold text-gray-800 group-hover:text-gray-900 bg-white group-hover:bg-gray-100 sticky left-0 z-10 transition-colors duration-200 ease-in-out px-[10px] min-w-80 text-sm">
+                    <td className="py-2 font-semibold text-gray-800 group-hover:text-gray-900 bg-white group-hover:bg-gray-100 sticky left-0 z-20 transition-colors duration-200 ease-in-out px-[10px] min-w-80 text-sm max-h-[35px] h-[35px] overflow-hidden">
                       <div className="flex justify-between items-center min-w-full text-md text-bold">
                         {localCollapsedGroups.has(categoryGroup.category) ? <ChevronRight className="w-4 h-4 mr-2 text-gray-500 transition-transform duration-200" /> : <ChevronDown className="w-4 h-4 mr-2 text-gray-500 transition-transform duration-200" />}
                         {categoryGroup.category}
@@ -355,11 +371,66 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
                         </Badge>
                       </div>
                     </td>
-                    {monthlyData.map(({
-                  key
-                }) => <td key={key} className="px-4 py-4 text-center font-semibold text-gray-900 text-sm">
+                  {monthlyData.map(({
+                key,
+                year,
+                month,
+                display
+              }, monthIndex) => {
+                const current = categoryGroup.monthlyValues[key] || 0;
+                const previous = monthIndex > 0 ? categoryGroup.monthlyValues[monthlyData[monthIndex - 1].key] || 0 : 0;
+                const growthPercentage = getGrowthPercentage(current, previous);
+                
+                return <td 
+                  key={key}
+                  className="px-4 py-2 text-center font-semibold text-gray-900 text-sm hover:bg-blue-100 cursor-pointer transition-colors max-h-[35px] h-[35px] overflow-hidden"
+                  title={growthPercentage ? `${growthPercentage}% vs last year` : ''}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent group toggle
+                    
+                    // Category group cell click for specific month
+                    const categoryMonthData = data.filter(item => {
+                      const itemDate = parseDate(item.paymentDate);
+                      if (!itemDate) return false;
+                      const matchesCategory = item.cleanedCategory === categoryGroup.category;
+                      const matchesMonth = itemDate.getFullYear() === year && itemDate.getMonth() + 1 === month;
+                      return matchesCategory && matchesMonth;
+                    });
+                    
+                    const monthRevenue = categoryMonthData.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
+                    const monthTransactions = categoryMonthData.length;
+                    const monthCustomers = new Set(categoryMonthData.map(item => item.memberId || item.customerEmail)).size;
+                    
+                    const categoryCellData = {
+                      name: `${categoryGroup.category} - ${display}`,
+                      category: categoryGroup.category,
+                      totalRevenue: monthRevenue,
+                      grossRevenue: monthRevenue,
+                      netRevenue: monthRevenue,
+                      totalValue: monthRevenue,
+                      totalCurrent: monthRevenue,
+                      metricValue: monthRevenue,
+                      transactions: monthTransactions,
+                      totalTransactions: monthTransactions,
+                      uniqueMembers: monthCustomers,
+                      totalCustomers: monthCustomers,
+                      rawData: categoryMonthData,
+                      filteredTransactionData: categoryMonthData,
+                      isDynamic: true,
+                      calculatedFromFiltered: true,
+                      isGroupCell: true,
+                      cellSpecific: true,
+                      month: display,
+                      monthKey: key
+                    };
+                    
+                    console.log(`Category group cell click: ${categoryGroup.category} - ${display}: ${monthTransactions} transactions, ${monthRevenue} revenue`);
+                    onRowClick && onRowClick(categoryCellData);
+                  }}
+                >
                         {formatMetricValue(categoryGroup.monthlyValues[key] || 0, selectedMetric)}
-                      </td>)}
+                      </td>;
+                })}
                   </tr>
 
                   {!localCollapsedGroups.has(categoryGroup.category) && categoryGroup.products.map(product => <tr key={`${categoryGroup.category}-${product.product}`} className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors duration-200" onClick={() => onRowClick && onRowClick(product.rawData)}>
@@ -372,8 +443,54 @@ export const EnhancedYearOnYearTable: React.FC<EnhancedYearOnYearTableProps> = (
                         </div>
                       </td>
                       {monthlyData.map(({
-                  key
-                }) => <td key={key} className="px-4 py-3 text-center text-sm text-gray-900 font-mono">
+                  key,
+                  year,
+                  month,
+                  display
+                }) => 
+                        <td 
+                          key={key} 
+                          className="px-4 py-3 text-center text-sm text-gray-900 font-mono hover:bg-blue-50 cursor-pointer transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click
+                            
+                            // Filter data for this specific month and product
+                            const monthSpecificData = (Array.isArray(product.rawData) ? product.rawData : []).filter((transaction: any) => {
+                              const itemDate = parseDate(transaction.paymentDate);
+                              if (!itemDate) return false;
+                              return itemDate.getFullYear() === year && itemDate.getMonth() + 1 === month;
+                            });
+                            
+                            const monthRevenue = monthSpecificData.reduce((sum: any, transaction: any) => sum + (transaction.paymentValue || 0), 0);
+                            const monthTransactions = monthSpecificData.length;
+                            const monthCustomers = new Set(monthSpecificData.map((transaction: any) => transaction.memberId || transaction.customerEmail)).size;
+                            
+                            const enhancedCellData = {
+                              ...product,
+                              name: `${product.product} - ${display}`,
+                              totalRevenue: monthRevenue,
+                              grossRevenue: monthRevenue,
+                              netRevenue: monthRevenue,
+                              totalValue: monthRevenue,
+                              totalCurrent: monthRevenue,
+                              metricValue: monthRevenue,
+                              transactions: monthTransactions,
+                              totalTransactions: monthTransactions,
+                              uniqueMembers: monthCustomers,
+                              totalCustomers: monthCustomers,
+                              rawData: monthSpecificData,
+                              filteredTransactionData: monthSpecificData,
+                              isDynamic: true,
+                              calculatedFromFiltered: true,
+                              cellSpecific: true,
+                              month: display,
+                              monthKey: key
+                            };
+                            
+                            console.log(`Cell click: ${product.product} - ${display}: ${monthTransactions} transactions, ${monthRevenue} revenue`);
+                            onRowClick && onRowClick(enhancedCellData);
+                          }}
+                        >
                           {formatMetricValue(product.monthlyValues[key] || 0, selectedMetric)}
                         </td>)}
                     </tr>)}

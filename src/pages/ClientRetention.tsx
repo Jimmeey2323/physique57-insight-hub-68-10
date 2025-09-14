@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNewClientData } from '@/hooks/useNewClientData';
 import { useGlobalLoading } from '@/hooks/useGlobalLoading';
 import { useNavigate } from 'react-router-dom';
@@ -6,56 +6,49 @@ import { Button } from '@/components/ui/button';
 import { Home, Users } from 'lucide-react';
 import { Footer } from '@/components/ui/footer';
 import { ProfessionalLoader } from '@/components/dashboard/ProfessionalLoader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BarChart3, TrendingUp, Target, Users as UsersIcon, Eye, Calendar, Filter, PieChart } from 'lucide-react';
+import { AdvancedExportButton } from '@/components/ui/AdvancedExportButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { NewClientFilterOptions } from '@/types/dashboard';
-import { getPreviousMonthDateRange } from '@/utils/dateUtils';
+import { ModernHeroSection } from '@/components/ui/ModernHeroSection';
+import { formatNumber } from '@/utils/formatters';
+import { getPreviousMonthDateRange, parseDate } from '@/utils/dateUtils';
+import { cn } from '@/lib/utils';
 
-// Import enhanced components
-import { ClientConversionLocationSelector } from '@/components/dashboard/ClientConversionLocationSelector';
+// Import new components for rebuilt client conversion tab
 import { EnhancedClientConversionFilterSection } from '@/components/dashboard/EnhancedClientConversionFilterSection';
-import { ClientConversionDetailedDataTable } from '@/components/dashboard/ClientConversionDetailedDataTable';
-import { EnhancedClientConversionMetrics } from '@/components/dashboard/EnhancedClientConversionMetrics';
-import { ClientConversionAdvancedMetrics } from '@/components/dashboard/ClientConversionAdvancedMetrics';
-import { UniversalDrillDownModal } from '@/components/dashboard/UniversalDrillDownModal';
-import { ClientConversionTopBottomLists } from '@/components/dashboard/ClientConversionTopBottomLists';
-import { ClientConversionCharts } from '@/components/dashboard/ClientConversionCharts';
+import { ClientConversionMetricCards } from '@/components/dashboard/ClientConversionMetricCards';
+import { ClientConversionSimplifiedRanks } from '@/components/dashboard/ClientConversionSimplifiedRanks';
+import { ClientConversionEnhancedCharts } from '@/components/dashboard/ClientConversionEnhancedCharts';
+import { ClientConversionDataTableSelector } from '@/components/dashboard/ClientConversionDataTableSelector';
 import { ClientConversionMonthOnMonthTable } from '@/components/dashboard/ClientConversionMonthOnMonthTable';
+import { ClientConversionMonthOnMonthByTypeTable } from '@/components/dashboard/ClientConversionMonthOnMonthByTypeTable';
 import { ClientConversionYearOnYearTable } from '@/components/dashboard/ClientConversionYearOnYearTable';
 import { ClientConversionMembershipTable } from '@/components/dashboard/ClientConversionMembershipTable';
-import { ClientConversionEntityTable } from '@/components/dashboard/ClientConversionEntityTable';
-
+import { ClientHostedClassesTable } from '@/components/dashboard/ClientHostedClassesTable';
+import { ClientConversionDrillDownModalV3 } from '@/components/dashboard/ClientConversionDrillDownModalV3';
 const ClientRetention = () => {
-  const { data, loading } = useNewClientData();
-  const { isLoading, setLoading } = useGlobalLoading();
+  const {
+    data,
+    loading
+  } = useNewClientData();
+  const {
+    isLoading,
+    setLoading
+  } = useGlobalLoading();
   const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState('All Locations');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [drillDownModal, setDrillDownModal] = useState({ isOpen: false, data: null, type: '', title: '' });
-  
-  // Get previous month date range function
-  const getPreviousMonthRange = () => {
-    const now = new Date();
-    const firstDayPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastDayPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    
-    return {
-      start: formatDate(firstDayPreviousMonth),
-      end: formatDate(lastDayPreviousMonth)
-    };
-  };
-  
+  const [activeTable, setActiveTable] = useState('monthonmonthbytype');
+  const [drillDownModal, setDrillDownModal] = useState({
+    isOpen: false,
+    client: null,
+    title: '',
+    data: null,
+    type: 'month' as any
+  });
+
   // Filters state
   const [filters, setFilters] = useState<NewClientFilterOptions>(() => {
-    const previousMonth = getPreviousMonthRange();
+    const previousMonth = getPreviousMonthDateRange();
     return {
       dateRange: previousMonth,
       location: [],
@@ -69,7 +62,6 @@ const ClientRetention = () => {
       maxLTV: undefined
     };
   });
-
   useEffect(() => {
     setLoading(loading, 'Analyzing client conversion and retention patterns...');
   }, [loading, setLoading]);
@@ -88,7 +80,6 @@ const ClientRetention = () => {
     });
     return Array.from(locations).filter(Boolean);
   }, [data]);
-
   const uniqueTrainers = React.useMemo(() => {
     const trainers = new Set<string>();
     data.forEach(client => {
@@ -96,7 +87,6 @@ const ClientRetention = () => {
     });
     return Array.from(trainers).filter(Boolean);
   }, [data]);
-
   const uniqueMembershipTypes = React.useMemo(() => {
     const memberships = new Set<string>();
     data.forEach(client => {
@@ -108,77 +98,88 @@ const ClientRetention = () => {
   // Filter data by selected location and filters
   const filteredData = React.useMemo(() => {
     console.log('Filtering data. Total records:', data.length, 'Selected location:', selectedLocation);
-    
     let filtered = data;
-    
+
     // Apply date range filter FIRST
     if (filters.dateRange.start || filters.dateRange.end) {
-      const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
-      const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
-
+      const startDate = filters.dateRange.start ? new Date(filters.dateRange.start + 'T00:00:00') : null;
+      const endDate = filters.dateRange.end ? new Date(filters.dateRange.end + 'T23:59:59') : null;
+      console.log('Date filter range:', {
+        start: startDate,
+        end: endDate
+      });
       filtered = filtered.filter(client => {
         if (!client.firstVisitDate) return false;
-        
-        let clientDate: Date;
-        if (client.firstVisitDate.includes('/')) {
-          const [day, month, year] = client.firstVisitDate.split(' ')[0].split('/');
-          clientDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        } else {
-          clientDate = new Date(client.firstVisitDate);
+        const clientDate = parseDate(client.firstVisitDate);
+        if (!clientDate) {
+          console.warn('Invalid client date:', client.firstVisitDate);
+          return false;
         }
-        
-        if (isNaN(clientDate.getTime())) return false;
-        if (startDate && clientDate < startDate) return false;
-        if (endDate && clientDate > endDate) return false;
-        return true;
+
+        // Set client date to start of day for comparison
+        clientDate.setHours(0, 0, 0, 0);
+        const withinRange = (!startDate || clientDate >= startDate) && (!endDate || clientDate <= endDate);
+        if (!withinRange) {
+          console.log('Client filtered out by date:', {
+            clientDate: clientDate.toISOString().split('T')[0],
+            originalDate: client.firstVisitDate,
+            startDate: startDate?.toISOString().split('T')[0],
+            endDate: endDate?.toISOString().split('T')[0]
+          });
+        }
+        return withinRange;
       });
+      console.log(`Date filter applied: ${data.length} -> ${filtered.length} records`);
     }
-    
-    // Apply location filter
+
+    // Apply location filter - check both firstVisitLocation and homeLocation
     if (selectedLocation !== 'All Locations') {
+      const beforeLocationFilter = filtered.length;
+
+      // Debug: Check all unique locations for Kenkere House
+      if (selectedLocation === 'Kenkere House, Bengaluru') {
+        const uniqueFirstLocations = [...new Set(filtered.map(c => c.firstVisitLocation).filter(Boolean))];
+        const uniqueHomeLocations = [...new Set(filtered.map(c => c.homeLocation).filter(Boolean))];
+        console.log('All unique first visit locations:', uniqueFirstLocations.filter(loc => loc.includes('Kenkere') || loc.includes('Bengaluru')));
+        console.log('All unique home locations:', uniqueHomeLocations.filter(loc => loc.includes('Kenkere') || loc.includes('Bengaluru')));
+      }
       filtered = filtered.filter(client => {
-        const clientLocation = client.firstVisitLocation || client.homeLocation || 'Unknown';
-        return clientLocation === selectedLocation;
+        const firstLocation = client.firstVisitLocation || '';
+        const homeLocation = client.homeLocation || '';
+
+        // For Kenkere House, try more flexible matching
+        if (selectedLocation === 'Kenkere House, Bengaluru') {
+          const matchesFirst = firstLocation.toLowerCase().includes('kenkere') || firstLocation.toLowerCase().includes('bengaluru') || firstLocation === 'Kenkere House';
+          const matchesHome = homeLocation.toLowerCase().includes('kenkere') || homeLocation.toLowerCase().includes('bengaluru') || homeLocation === 'Kenkere House';
+          return matchesFirst || matchesHome;
+        }
+
+        // For other locations, use exact match
+        return firstLocation === selectedLocation || homeLocation === selectedLocation;
       });
+      console.log(`Location filter ${selectedLocation}: ${beforeLocationFilter} -> ${filtered.length} records`);
     }
-    
+
     // Apply additional filters
     if (filters.location.length > 0) {
-      filtered = filtered.filter(client => 
-        filters.location.includes(client.firstVisitLocation || '') ||
-        filters.location.includes(client.homeLocation || '')
-      );
+      filtered = filtered.filter(client => filters.location.includes(client.firstVisitLocation || '') || filters.location.includes(client.homeLocation || ''));
     }
-    
     if (filters.trainer.length > 0) {
-      filtered = filtered.filter(client => 
-        filters.trainer.includes(client.trainerName || '')
-      );
+      filtered = filtered.filter(client => filters.trainer.includes(client.trainerName || ''));
     }
 
     // Apply other filters
     if (filters.conversionStatus.length > 0) {
-      filtered = filtered.filter(client => 
-        filters.conversionStatus.includes(client.conversionStatus || '')
-      );
+      filtered = filtered.filter(client => filters.conversionStatus.includes(client.conversionStatus || ''));
     }
-
     if (filters.retentionStatus.length > 0) {
-      filtered = filtered.filter(client => 
-        filters.retentionStatus.includes(client.retentionStatus || '')
-      );
+      filtered = filtered.filter(client => filters.retentionStatus.includes(client.retentionStatus || ''));
     }
-
     if (filters.paymentMethod.length > 0) {
-      filtered = filtered.filter(client => 
-        filters.paymentMethod.includes(client.paymentMethod || '')
-      );
+      filtered = filtered.filter(client => filters.paymentMethod.includes(client.paymentMethod || ''));
     }
-
     if (filters.isNew.length > 0) {
-      filtered = filtered.filter(client => 
-        filters.isNew.includes(client.isNew || '')
-      );
+      filtered = filtered.filter(client => filters.isNew.includes(client.isNew || ''));
     }
 
     // Apply LTV filters
@@ -188,248 +189,211 @@ const ClientRetention = () => {
     if (filters.maxLTV !== undefined) {
       filtered = filtered.filter(client => (client.ltv || 0) <= filters.maxLTV!);
     }
-    
     console.log('Filtered data:', filtered.length, 'records');
     return filtered;
   }, [data, selectedLocation, filters]);
+  const heroMetrics = useMemo(() => {
+    if (!filteredData || filteredData.length === 0) return [];
+    const locations = [{
+      key: 'Kwality House, Kemps Corner',
+      name: 'Kwality'
+    }, {
+      key: 'Supreme HQ, Bandra',
+      name: 'Supreme'
+    }, {
+      key: 'Kenkere House, Bengaluru',
+      name: 'Kenkere'
+    }];
+    return locations.map(location => {
+      const locationData = filteredData.filter(item => {
+        const firstLocation = item.firstVisitLocation || '';
+        const homeLocation = item.homeLocation || '';
 
+        // For Kenkere House, use flexible matching
+        if (location.key === 'Kenkere House, Bengaluru') {
+          return firstLocation.toLowerCase().includes('kenkere') || firstLocation.toLowerCase().includes('bengaluru') || firstLocation === 'Kenkere House' || homeLocation.toLowerCase().includes('kenkere') || homeLocation.toLowerCase().includes('bengaluru') || homeLocation === 'Kenkere House';
+        }
+
+        // For other locations, use exact match
+        return firstLocation === location.key || homeLocation === location.key;
+      });
+      const totalClients = locationData.length;
+      return {
+        location: location.name,
+        label: 'Filtered Clients',
+        value: formatNumber(totalClients)
+      };
+    });
+  }, [filteredData]);
   if (isLoading) {
     return <ProfessionalLoader variant="conversion" subtitle="Analyzing client conversion and retention patterns..." />;
   }
-
   console.log('Rendering ClientRetention with data:', data.length, 'records, filtered:', filteredData.length);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-pink-50/20">
-      {/* Animated Header Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-green-900 via-teal-800 to-blue-900 text-white">
-        <div className="absolute inset-0 bg-black/20" />
-        
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-4 -left-4 w-32 h-32 bg-white/10 rounded-full animate-pulse"></div>
-          <div className="absolute top-20 right-10 w-24 h-24 bg-green-300/20 rounded-full animate-bounce delay-1000"></div>
-          <div className="absolute bottom-10 left-20 w-40 h-40 bg-teal-300/10 rounded-full animate-pulse delay-500"></div>
-        </div>
-        
-        <div className="relative px-8 py-12">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <Button 
-                onClick={() => navigate('/')} 
-                variant="outline" 
-                size="sm" 
-                className="gap-2 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:border-white/30 transition-all duration-200"
-              >
-                <Home className="w-4 h-4" />
-                Dashboard
-              </Button>
-            </div>
-            
-            <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 border border-white/20 animate-fade-in-up">
-                <Users className="w-5 h-5" />
-                <span className="font-medium">Client Analytics</span>
-              </div>
-              
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-green-100 to-blue-100 bg-clip-text text-transparent animate-fade-in-up delay-200">
-                Client Conversion & Retention
-              </h1>
-              
-              <p className="text-xl text-green-100 max-w-2xl mx-auto leading-relaxed animate-fade-in-up delay-300">
-                Comprehensive client acquisition and retention analysis across all customer touchpoints
-              </p>
-            </div>
-          </div>
-        </div>
+  const exportButton = <AdvancedExportButton newClientData={filteredData} defaultFileName={`client-conversion-${selectedLocation.replace(/\s+/g, '-').toLowerCase()}`} size="sm" variant="ghost" />;
+  return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+        <ModernHeroSection 
+          title="Client Conversion & Retention" 
+          subtitle="Comprehensive client acquisition and retention analysis across all customer touchpoints" 
+          variant="client" 
+          metrics={heroMetrics} 
+          exportButton={exportButton}
+        />
       </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-8 bg-white min-h-screen">
         <main className="space-y-8">
-          {/* Location Selector */}
-          <ClientConversionLocationSelector
-            data={data}
-            selectedLocation={selectedLocation}
-            onLocationChange={setSelectedLocation}
-          />
-
           {/* Enhanced Filter Section */}
-          <EnhancedClientConversionFilterSection
-            filters={filters}
-            onFiltersChange={setFilters}
-            locations={uniqueLocations}
-            trainers={uniqueTrainers}
-            membershipTypes={uniqueMembershipTypes}
-          />
+          <EnhancedClientConversionFilterSection filters={filters} onFiltersChange={setFilters} locations={uniqueLocations} trainers={uniqueTrainers} membershipTypes={uniqueMembershipTypes} />
 
-          {/* Location Performance Tabs */}
-          <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                <Button
-                  variant={selectedLocation === 'All Locations' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSelectedLocation('All Locations')}
-                  className="gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  All Locations ({data.length})
-                </Button>
-                <Button
-                  variant={selectedLocation === 'Kwality House, Kemps Corner' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSelectedLocation('Kwality House, Kemps Corner')}
-                  className="gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Kemps Corner ({data.filter(client => 
-                    client.firstVisitLocation === 'Kwality House, Kemps Corner' || client.homeLocation === 'Kwality House, Kemps Corner'
-                  ).length})
-                </Button>
-                <Button
-                  variant={selectedLocation === 'Supreme HQ, Bandra' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSelectedLocation('Supreme HQ, Bandra')}
-                  className="gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Bandra ({data.filter(client => 
-                    client.firstVisitLocation === 'Supreme HQ, Bandra' || client.homeLocation === 'Supreme HQ, Bandra'
-                  ).length})
-                </Button>
-                <Button
-                  variant={selectedLocation === 'Kenkere House, Bengaluru' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSelectedLocation('Kenkere House, Bengaluru')}
-                  className="gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Bengaluru ({data.filter(client => 
-                    client.firstVisitLocation === 'Kenkere House, Bengaluru' || client.homeLocation === 'Kenkere House, Bengaluru'
-                  ).length})
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Location Tabs - Fixed styling */}
+          <div className="flex justify-center mb-8">
+            <div className="bg-white/20 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-white/30 grid grid-cols-4 w-full max-w-4xl">
+              <button 
+                onClick={() => setSelectedLocation('All Locations')} 
+                className={cn(
+                  "px-6 py-3 rounded-xl transition-all duration-300 font-medium text-sm flex flex-col items-center gap-2",
+                  selectedLocation === 'All Locations' 
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg" 
+                    : "text-slate-800 hover:text-slate-700 hover:bg-slate-100/50"
+                )}
+              >
+                <Users className="w-6 h-6" />
+                <div className="text-center">
+                  <div className="font-bold">All Locations</div>
+                  <div className="text-xs opacity-80">({data.length})</div>
+                </div>
+              </button>
+              <button 
+                onClick={() => setSelectedLocation('Kwality House, Kemps Corner')} 
+                className={cn(
+                  "px-6 py-3 rounded-xl transition-all duration-300 font-medium text-sm flex flex-col items-center gap-2",
+                  selectedLocation === 'Kwality House, Kemps Corner' 
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg" 
+                    : "text-slate-800 hover:text-slate-700 hover:bg-slate-100/50"
+                )}
+              >
+                <Users className="w-6 h-6" />
+                <div className="text-center">
+                  <div className="font-bold">Kwality House</div>
+                  <div className="text-xs opacity-80">Kemps Corner ({data.filter(client => client.firstVisitLocation === 'Kwality House, Kemps Corner' || client.homeLocation === 'Kwality House, Kemps Corner').length})</div>
+                </div>
+              </button>
+              <button 
+                onClick={() => setSelectedLocation('Supreme HQ, Bandra')} 
+                className={cn(
+                  "px-6 py-3 rounded-xl transition-all duration-300 font-medium text-sm flex flex-col items-center gap-2",
+                  selectedLocation === 'Supreme HQ, Bandra' 
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg" 
+                    : "text-slate-800 hover:text-slate-700 hover:bg-slate-100/50"
+                )}
+              >
+                <Users className="w-6 h-6" />
+                <div className="text-center">
+                  <div className="font-bold">Supreme HQ</div>
+                  <div className="text-xs opacity-80">Bandra ({data.filter(client => client.firstVisitLocation === 'Supreme HQ, Bandra' || client.homeLocation === 'Supreme HQ, Bandra').length})</div>
+                </div>
+              </button>
+              <button 
+                onClick={() => setSelectedLocation('Kenkere House, Bengaluru')} 
+                className={cn(
+                  "px-6 py-3 rounded-xl transition-all duration-300 font-medium text-sm flex flex-col items-center gap-2",
+                  selectedLocation === 'Kenkere House' 
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg" 
+                    : "text-slate-800 hover:text-slate-700 hover:bg-slate-100/50"
+                )}
+              >
+                <Users className="w-6 h-6" />
+                <div className="text-center">
+                  <div className="font-bold">Kenkere House</div>
+                  <div className="text-xs opacity-80">Bengaluru ({data.filter(client => {
+                    const firstLoc = (client.firstVisitLocation || '').toLowerCase();
+                    const homeLoc = (client.homeLocation || '').toLowerCase();
+                    return firstLoc.includes('kenkere') || homeLoc.includes('kenkere') || firstLoc.includes('bengaluru') || homeLoc.includes('bengaluru') || client.firstVisitLocation === 'Kenkere House' || client.homeLocation === 'Kenkere House';
+                  }).length})</div>
+                </div>
+              </button>
+            </div>
+          </div>
 
-          {/* Additional Location Tabs for better visibility */}
-          <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-4">
-              <div className="flex flex-wrap gap-2">
-                {['All Locations', 'Kwality House, Kemps Corner', 'Supreme HQ, Bandra', 'Kenkere House, Bengaluru'].map((location) => (
-                  <Button
-                    key={location}
-                    variant={selectedLocation === location ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setSelectedLocation(location)}
-                    className="gap-2"
-                  >
-                    <Users className="w-4 h-4" />
-                    {location === 'All Locations' ? 'All Locations' : location.split(',')[0]} 
-                    ({location === 'All Locations' ? data.length : data.filter(client => 
-                      client.firstVisitLocation === location || client.homeLocation === location
-                    ).length})
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Metric Cards */}
+          <ClientConversionMetricCards data={filteredData} onCardClick={(title, data, metricType) => setDrillDownModal({
+          isOpen: true,
+          client: null,
+          title: `${title} - Detailed Analysis`,
+          data: {
+            clients: data,
+            metricType
+          },
+          type: 'metric'
+        })} />
 
-          {/* Main Content Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <Card className="bg-white shadow-sm border border-gray-200">
-              <CardContent className="p-4">
-                <TabsList className="grid w-full grid-cols-7 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="overview" className="text-sm font-medium">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="analytics" className="text-sm font-medium">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Analytics
-                  </TabsTrigger>
-                  <TabsTrigger value="charts" className="text-sm font-medium">
-                    <PieChart className="w-4 h-4 mr-2" />
-                    Charts
-                  </TabsTrigger>
-                  <TabsTrigger value="monthonmonth" className="text-sm font-medium">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Month-on-Month
-                  </TabsTrigger>
-                  <TabsTrigger value="yearonyear" className="text-sm font-medium">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Year-on-Year
-                  </TabsTrigger>
-                  <TabsTrigger value="memberships" className="text-sm font-medium">
-                    <Target className="w-4 h-4 mr-2" />
-                    Memberships
-                  </TabsTrigger>
-                  <TabsTrigger value="detailed" className="text-sm font-medium">
-                    <Eye className="w-4 h-4 mr-2" />
-                    Detailed View
-                  </TabsTrigger>
-                </TabsList>
-              </CardContent>
-            </Card>
+          {/* Simplified Ranking System */}
+          <ClientConversionSimplifiedRanks data={filteredData} />
 
+          {/* Enhanced Interactive Charts - Collapsed by default */}
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg border">
+              <details className="group">
+                <summary className="cursor-pointer p-4 font-semibold text-slate-800 border-b group-open:bg-gray-50">
+                  📊 Interactive Charts & Visualizations
+                </summary>
+                <div className="p-4">
+                  <ClientConversionEnhancedCharts data={filteredData} />
+                </div>
+              </details>
+            </div>
+          </div>
 
-            <TabsContent value="overview" className="space-y-8">
-              <ClientConversionAdvancedMetrics
-                data={filteredData}
-                payrollData={[]}
-                onDrillDown={(title, data, type = 'client') => setDrillDownModal({ isOpen: true, data, type, title })}
-              />
-              <ClientConversionTopBottomLists data={filteredData} />
-            </TabsContent>
+          {/* Data Table Selector */}
+          <ClientConversionDataTableSelector activeTable={activeTable} onTableChange={setActiveTable} dataLength={filteredData.length} />
 
-            <TabsContent value="analytics" className="space-y-8">
-              <ClientConversionAdvancedMetrics
-                data={filteredData}
-                payrollData={[]}
-                onDrillDown={(title, data, type = 'client') => setDrillDownModal({ isOpen: true, data, type, title })}
-              />
-              <ClientConversionEntityTable data={filteredData} />
-            </TabsContent>
+          {/* Selected Data Table */}
+          <div className="space-y-8">
+            {activeTable === 'monthonmonthbytype' && <ClientConversionMonthOnMonthByTypeTable data={filteredData} onRowClick={rowData => setDrillDownModal({
+            isOpen: true,
+            client: null,
+            title: `${rowData.month} - ${rowData.type} Analysis`,
+            data: rowData,
+            type: 'month'
+          })} />}
 
-            <TabsContent value="charts" className="space-y-8">
-              <ClientConversionCharts data={filteredData} />
-            </TabsContent>
+            {activeTable === 'monthonmonth' && <ClientConversionMonthOnMonthTable data={filteredData} onRowClick={rowData => setDrillDownModal({
+            isOpen: true,
+            client: null,
+            title: `${rowData.month} Analysis`,
+            data: rowData,
+            type: 'month'
+          })} />}
 
-            <TabsContent value="monthonmonth" className="space-y-8">
-              <ClientConversionMonthOnMonthTable data={filteredData} />
-            </TabsContent>
+            {activeTable === 'yearonyear' && <ClientConversionYearOnYearTable data={filteredData} onRowClick={rowData => setDrillDownModal({
+            isOpen: true,
+            client: null,
+            title: `${rowData.month} Year Comparison`,
+            data: rowData,
+            type: 'year'
+          })} />}
 
-            <TabsContent value="yearonyear" className="space-y-8">
-              <ClientConversionYearOnYearTable data={filteredData} />
-            </TabsContent>
+            {activeTable === 'hostedclasses' && <ClientHostedClassesTable data={filteredData} onRowClick={rowData => setDrillDownModal({
+            isOpen: true,
+            client: null,
+            title: `${rowData.className} - ${rowData.month}`,
+            data: rowData,
+            type: 'class'
+          })} />}
 
-            <TabsContent value="memberships" className="space-y-8">
-              <ClientConversionMembershipTable data={filteredData} />
-            </TabsContent>
-
-            <TabsContent value="detailed" className="space-y-8">
-              <ClientConversionDetailedDataTable
-                data={filteredData}
-                onItemClick={(item) => setDrillDownModal({
-                  isOpen: true,
-                  data: [item],
-                  type: 'client',
-                  title: `Client Details: ${item.firstName} ${item.lastName}`
-                })}
-              />
-            </TabsContent>
-          </Tabs>
-
-          {/* Drill Down Modal */}
-          <UniversalDrillDownModal
-            isOpen={drillDownModal.isOpen}
-            onClose={() => setDrillDownModal({ ...drillDownModal, isOpen: false })}
-            data={drillDownModal.data}
-            relatedData={filteredData}
-            type={drillDownModal.type as any}
-            title={drillDownModal.title}
-          />
+            {activeTable === 'memberships' && <ClientConversionMembershipTable data={filteredData} />}
+          </div>
         </main>
+
+        {/* Enhanced Drill Down Modal */}
+        <ClientConversionDrillDownModalV3 isOpen={drillDownModal.isOpen} onClose={() => setDrillDownModal({
+        isOpen: false,
+        client: null,
+        title: '',
+        data: null,
+        type: 'month'
+      })} title={drillDownModal.title} data={drillDownModal.data} type={drillDownModal.type} />
       </div>
       
       <Footer />
@@ -462,8 +426,6 @@ const ClientRetention = () => {
           animation-delay: 0.5s;
         }
       `}</style>
-    </div>
-  );
+    </div>;
 };
-
 export default ClientRetention;

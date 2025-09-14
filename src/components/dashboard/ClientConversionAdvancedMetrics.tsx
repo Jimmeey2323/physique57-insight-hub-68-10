@@ -44,7 +44,7 @@ export const ClientConversionAdvancedMetrics: React.FC<ClientConversionAdvancedM
         const month = client.monthYear || getMonthYear(client.firstVisitDate, 'Unknown');
         if (!stats[month]) stats[month] = { total: 0, converted: 0, retained: 0, newClients: 0 };
         stats[month].total++;
-        if ((client.isNew || '').toLowerCase().includes('new')) stats[month].newClients++;
+        if ((client.isNew || '').includes('New')) stats[month].newClients++;
         if (client.conversionStatus === 'Converted') stats[month].converted++;
         if (client.retentionStatus === 'Retained') stats[month].retained++;
       }
@@ -55,7 +55,7 @@ export const ClientConversionAdvancedMetrics: React.FC<ClientConversionAdvancedM
 
   // --- Summary metrics ---
   const totalClients = data.length;
-  const totalNew = data.filter(c => (c.isNew || '').toLowerCase().includes('new')).length;
+  const totalNew = data.filter(c => (c.isNew || '').includes('New')).length;
   const totalConverted = data.filter(c => c.conversionStatus === 'Converted').length;
   const totalRetained = data.filter(c => c.retentionStatus === 'Retained').length;
   const avgLTV = totalClients > 0 ? data.reduce((sum, c) => sum + (c.ltv || 0), 0) / totalClients : 0;
@@ -83,8 +83,8 @@ export const ClientConversionAdvancedMetrics: React.FC<ClientConversionAdvancedM
       }
       
       acc[membership].totalClients++;
-  if ((client.conversionStatus || '').toLowerCase().includes('converted')) acc[membership].converted++;
-  if ((client.retentionStatus || '').toLowerCase().includes('retained')) acc[membership].retained++;
+      if (client.conversionStatus === 'Converted') acc[membership].converted++;
+      if (client.retentionStatus === 'Retained') acc[membership].retained++;
       acc[membership].totalLTV += client.ltv || 0;
       if (client.conversionSpan && client.conversionSpan > 0) {
         acc[membership].conversionSpans.push(client.conversionSpan);
@@ -173,8 +173,8 @@ export const ClientConversionAdvancedMetrics: React.FC<ClientConversionAdvancedM
       }
       
       acc[isNewValue].totalClients++;
-      if ((client.conversionStatus || '').toLowerCase().includes('converted')) acc[isNewValue].converted++;
-      if ((client.retentionStatus || '').toLowerCase().includes('retained')) acc[isNewValue].retained++;
+      if (client.conversionStatus === 'Converted') acc[isNewValue].converted++;
+      if (client.retentionStatus === 'Retained') acc[isNewValue].retained++;
       acc[isNewValue].totalLTV += client.ltv || 0;
       acc[isNewValue].totalVisits += client.visitsPostTrial || 0;
       if (client.conversionSpan && client.conversionSpan > 0) {

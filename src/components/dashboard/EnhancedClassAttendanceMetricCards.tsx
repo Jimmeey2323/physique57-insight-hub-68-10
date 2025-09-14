@@ -11,9 +11,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface EnhancedClassAttendanceMetricCardsProps {
   data: SessionData[];
+  payrollData: any[];
 }
 
-export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanceMetricCardsProps> = ({ data }) => {
+export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanceMetricCardsProps> = ({ data, payrollData }) => {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
   const metrics = useMemo(() => {
@@ -30,12 +31,12 @@ export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanc
     const uniqueTrainers = [...new Set(data.map(session => session.trainerName).filter(Boolean))];
     const uniqueLocations = [...new Set(data.map(session => session.location).filter(Boolean))];
     
-    const avgAttendance = totalSessions > 0 ? Math.round(totalAttendance / totalSessions) : 0;
-    const fillRate = totalCapacity > 0 ? Math.round((totalAttendance / totalCapacity) * 100) : 0;
-    const avgRevenue = totalSessions > 0 ? Math.round(totalRevenue / totalSessions) : 0;
-    const bookingRate = totalCapacity > 0 ? Math.round((totalBooked / totalCapacity) * 100) : 0;
-    const cancellationRate = totalBooked > 0 ? Math.round((totalLateCancelled / totalBooked) * 100) : 0;
-    const noShowRate = totalBooked > 0 ? Math.round(((totalBooked - totalAttendance - totalLateCancelled) / totalBooked) * 100) : 0;
+    const avgAttendance = totalSessions > 0 ? Number((totalAttendance / totalSessions).toFixed(1)) : 0;
+    const fillRate = totalCapacity > 0 ? Number(((totalAttendance / totalCapacity) * 100).toFixed(1)) : 0;
+    const avgRevenue = totalSessions > 0 ? Number((totalRevenue / totalSessions).toFixed(0)) : 0;
+    const bookingRate = totalCapacity > 0 ? Number(((totalBooked / totalCapacity) * 100).toFixed(1)) : 0;
+    const cancellationRate = totalBooked > 0 ? Number(((totalLateCancelled / totalBooked) * 100).toFixed(1)) : 0;
+    const noShowRate = totalBooked > 0 ? Number((((totalBooked - totalAttendance - totalLateCancelled) / totalBooked) * 100).toFixed(1)) : 0;
 
     // Peak hours analysis
     const hourlyData = data.reduce((acc, session) => {
@@ -76,7 +77,7 @@ export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanc
     const bestClass = Object.entries(classPerformance)
       .map(([name, stats]) => ({
         name,
-        avgAttendance: Math.round(stats.totalAttendance / stats.sessionCount),
+        avgAttendance: Number((stats.totalAttendance / stats.sessionCount).toFixed(1)),
         totalRevenue: stats.revenue
       }))
       .sort((a, b) => b.avgAttendance - a.avgAttendance)[0];
@@ -96,7 +97,7 @@ export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanc
     const topTrainer = Object.entries(trainerPerformance)
       .map(([name, stats]) => ({
         name,
-        avgAttendance: Math.round(stats.attendance / stats.sessions),
+        avgAttendance: Number((stats.attendance / stats.sessions).toFixed(1)),
         totalSessions: stats.sessions
       }))
       .sort((a, b) => b.avgAttendance - a.avgAttendance)[0];
@@ -135,7 +136,7 @@ export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanc
       trend: '+12%',
       trendUp: true,
       details: [
-        `Avg per day: ${Math.round(metrics.totalSessions / 30)}`,
+        `Avg per day: ${(metrics.totalSessions / 30).toFixed(1)}`,
         `${metrics.uniqueClasses} unique formats`,
         `${metrics.uniqueTrainers} trainers involved`
       ]
@@ -201,7 +202,7 @@ export const EnhancedClassAttendanceMetricCards: React.FC<EnhancedClassAttendanc
       details: [
         `Avg per session: ₹${metrics.avgRevenue.toLocaleString()}`,
         `Top class revenue: ₹${metrics.bestClass?.totalRevenue.toLocaleString() || 0}`,
-        `Revenue per attendee: ₹${Math.round(metrics.totalRevenue / metrics.totalAttendance)}`
+        `Revenue per attendee: ₹${(metrics.totalRevenue / metrics.totalAttendance).toFixed(0)}`
       ]
     },
     {

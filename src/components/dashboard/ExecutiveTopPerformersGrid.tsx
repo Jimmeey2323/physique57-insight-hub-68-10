@@ -25,16 +25,30 @@ interface ExecutiveTopPerformersGridProps {
 }
 
 export const ExecutiveTopPerformersGrid: React.FC<ExecutiveTopPerformersGridProps> = ({ data }) => {
-  // Top Trainers by Revenue
-  const topTrainersByRevenue = React.useMemo(() => {
-    return data.payroll
-      .sort((a, b) => (b.totalPaid || 0) - (a.totalPaid || 0))
+  // Top Class Types by Attendance
+  const topClassTypesByAttendance = React.useMemo(() => {
+    const classTypes = data.sessions.reduce((acc, session) => {
+      const classType = session.cleanedClass || 'Unknown';
+      if (!acc[classType]) {
+        acc[classType] = { classType, totalAttendance: 0, sessions: 0, avgAttendance: 0 };
+      }
+      acc[classType].totalAttendance += session.checkedInCount || 0;
+      acc[classType].sessions += 1;
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.values(classTypes)
+      .map((classType: any) => ({
+        ...classType,
+        avgAttendance: classType.sessions > 0 ? classType.totalAttendance / classType.sessions : 0
+      }))
+      .sort((a: any, b: any) => b.totalAttendance - a.totalAttendance)
       .slice(0, 5)
-      .map((trainer, index) => ({
-        ...trainer,
+      .map((classType, index) => ({
+        ...classType,
         rank: index + 1
       }));
-  }, [data.payroll]);
+  }, [data.sessions]);
 
   // Top Products by Revenue
   const topProductsByRevenue = React.useMemo(() => {
@@ -109,28 +123,28 @@ export const ExecutiveTopPerformersGrid: React.FC<ExecutiveTopPerformersGridProp
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Top Trainers by Revenue */}
+      {/* Top Class Types by Attendance */}
       <Card className="shadow-xl border-0">
         <CardHeader className="bg-gradient-to-r from-purple-600 to-violet-600 text-white">
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Top Trainers by Revenue
+            Top Class Types by Attendance
             <Badge className="bg-white/20 text-white">Previous Month</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
-          {topTrainersByRevenue.map((trainer) => (
-            <div key={trainer.teacherId} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          {topClassTypesByAttendance.map((classType) => (
+            <div key={classType.classType} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex items-center gap-3">
-                <RankBadge rank={trainer.rank} />
+                <RankBadge rank={classType.rank} />
                 <div>
-                  <p className="font-semibold">{trainer.teacherName}</p>
-                  <p className="text-sm text-gray-600">{trainer.location}</p>
+                  <p className="font-semibold">{classType.classType}</p>
+                  <p className="text-sm text-gray-600">{classType.sessions} sessions</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-lg">{formatCurrency(trainer.totalPaid || 0)}</p>
-                <p className="text-sm text-gray-600">{trainer.totalSessions || 0} sessions</p>
+                <p className="font-bold text-lg">{formatNumber(classType.totalAttendance)}</p>
+                <p className="text-sm text-gray-600">total attendance</p>
               </div>
             </div>
           ))}

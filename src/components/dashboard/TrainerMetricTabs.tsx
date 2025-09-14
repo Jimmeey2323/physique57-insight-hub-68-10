@@ -16,54 +16,62 @@ export const TrainerMetricTabs: React.FC<TrainerMetricTabsProps> = ({
 }) => {
   return (
     <Tabs value={value} onValueChange={onValueChange} className={className}>
-      <TabsList className="grid w-full grid-cols-8 bg-white border border-gray-200 p-1 rounded-xl shadow-sm h-16">
+      <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 gap-1 h-auto p-2">
         <TabsTrigger
           value="totalSessions"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Total Sessions
+          <span className="font-semibold">Total</span>
+          <span className="text-[10px] opacity-80">Sessions</span>
         </TabsTrigger>
         <TabsTrigger
           value="totalCustomers"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Total Members
+          <span className="font-semibold">Total</span>
+          <span className="text-[10px] opacity-80">Members</span>
         </TabsTrigger>
         <TabsTrigger
           value="totalPaid"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Total Revenue
+          <span className="font-semibold">Total</span>
+          <span className="text-[10px] opacity-80">Revenue</span>
         </TabsTrigger>
         <TabsTrigger
           value="classAverageExclEmpty"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Class Avg (Excl Empty)
+          <span className="font-semibold">Class</span>
+          <span className="text-[10px] opacity-80">Average</span>
         </TabsTrigger>
         <TabsTrigger
           value="emptySessions"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Empty Sessions
+          <span className="font-semibold">Empty</span>
+          <span className="text-[10px] opacity-80">Sessions</span>
         </TabsTrigger>
         <TabsTrigger
           value="conversion"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Conversion Rate
+          <span className="font-semibold">Conversion</span>
+          <span className="text-[10px] opacity-80">Rate</span>
         </TabsTrigger>
         <TabsTrigger
           value="retention"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          Retention Rate
+          <span className="font-semibold">Retention</span>
+          <span className="text-[10px] opacity-80">Rate</span>
         </TabsTrigger>
         <TabsTrigger
           value="newMembers"
-          className="text-xs px-2 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+          className="text-xs px-3 py-3 h-auto flex-col gap-1"
         >
-          New Members
+          <span className="font-semibold">New</span>
+          <span className="text-[10px] opacity-80">Members</span>
         </TabsTrigger>
       </TabsList>
     </Tabs>

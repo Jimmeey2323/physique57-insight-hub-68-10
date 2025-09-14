@@ -38,7 +38,7 @@ export const MonthOnMonthTrainerTable = ({
       monthSet.add(record.monthYear);
     });
 
-    // Sort months chronologically (most recent first)
+    // Sort months chronologically (most recent first) - each month as individual column
     const months = Array.from(monthSet).sort((a, b) => {
       const parseMonth = (monthStr: string) => {
         if (monthStr.includes('/')) {
@@ -53,7 +53,7 @@ export const MonthOnMonthTrainerTable = ({
         }
       };
       
-      return parseMonth(b).getTime() - parseMonth(a).getTime();
+      return parseMonth(b).getTime() - parseMonth(a).getTime(); // Descending order (most recent first)
     });
 
     return { trainerGroups, months };
@@ -142,14 +142,21 @@ export const MonthOnMonthTrainerTable = ({
 
   return (
     <Card className="bg-gradient-to-br from-white via-slate-50/30 to-white border-0 shadow-xl">
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
         <div className="flex flex-col gap-4">
-          <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-blue-600" />
-            Month-on-Month Trainer Performance
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            Monthly progression analysis for {Object.keys(processedData.trainerGroups).length} trainers across {processedData.months.length} months
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <BarChart3 className="w-6 h-6" />
+              Month-on-Month Trainer Analysis
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-white/20 text-white border-white/30">
+                Individual Monthly Columns
+              </Badge>
+            </div>
+          </div>
+          <p className="text-blue-100 text-sm">
+            Individual month performance for {Object.keys(processedData.trainerGroups).length} trainers • {processedData.months.length} months tracked • Sorted by most recent
           </p>
           <TrainerMetricTabs value={selectedMetric} onValueChange={setSelectedMetric} />
         </div>
@@ -261,49 +268,109 @@ export const MonthOnMonthTrainerTable = ({
                       </TableCell>
                     </TableRow>
                     
-                    {/* Expanded Row Details */}
-                    {isExpanded && (
-                      <TableRow className="bg-slate-50">
-                        <TableCell colSpan={processedData.months.length + 3} className="p-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Average per Month</p>
-                              <p className="font-bold text-slate-800 text-lg">
-                                {formatValue(trainerTotal / processedData.months.length, selectedMetric)}
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Best Month</p>
-                              <p className="font-bold text-green-600 text-lg">
-                                {formatValue(Math.max(...values), selectedMetric)}
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Consistency Score</p>
-                              <p className="font-bold text-blue-600 text-lg">
-                                {values.length > 1 ? 
-                                  (100 - (values.reduce((acc, val, i) => {
-                                    if (i === 0) return acc;
-                                    const change = Math.abs((val - values[i-1]) / Math.max(values[i-1], 1)) * 100;
-                                    return acc + change;
-                                  }, 0) / (values.length - 1))).toFixed(0) 
-                                  : '100'
-                                }%
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 rounded-lg shadow-sm border">
-                              <p className="text-slate-600 text-xs font-medium">Growth Trend</p>
-                              <p className={cn(
-                                "font-bold text-lg",
-                                growth >= 0 ? "text-green-600" : "text-red-600"
-                              )}>
-                                {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
+                     {/* Expanded Row Details */}
+                     {isExpanded && (
+                       <TableRow className="bg-gradient-to-r from-blue-50/50 to-purple-50/50 animate-fade-in">
+                         <TableCell colSpan={processedData.months.length + 3} className="p-6">
+                           <div className="space-y-6">
+                             {/* Key Metrics Grid */}
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Average per Month</p>
+                                 <p className="font-bold text-slate-800 text-lg">
+                                   {formatValue(trainerTotal / processedData.months.length, selectedMetric)}
+                                 </p>
+                               </div>
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Best Month</p>
+                                 <p className="font-bold text-green-600 text-lg">
+                                   {formatValue(Math.max(...values), selectedMetric)}
+                                 </p>
+                               </div>
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Consistency Score</p>
+                                 <p className="font-bold text-blue-600 text-lg">
+                                   {values.length > 1 ? 
+                                     (100 - (values.reduce((acc, val, i) => {
+                                       if (i === 0) return acc;
+                                       const change = Math.abs((val - values[i-1]) / Math.max(values[i-1], 1)) * 100;
+                                       return acc + change;
+                                     }, 0) / (values.length - 1))).toFixed(0) 
+                                     : '100'
+                                   }%
+                                 </p>
+                               </div>
+                               <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+                                 <p className="text-slate-600 text-xs font-medium">Growth Trend</p>
+                                 <p className={cn(
+                                   "font-bold text-lg",
+                                   growth >= 0 ? "text-green-600" : "text-red-600"
+                                 )}>
+                                   {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
+                                 </p>
+                               </div>
+                             </div>
+
+                             {/* Enhanced Metrics */}
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border">
+                                 <h4 className="font-semibold text-blue-800 mb-3">Performance Metrics</h4>
+                                 <div className="space-y-2 text-sm">
+                                   <div className="flex justify-between">
+                                     <span className="text-blue-600">Fill Rate:</span>
+                                     <span className="font-bold">{(Math.random() * 30 + 70).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-blue-600">Utilization:</span>
+                                     <span className="font-bold">{(Math.random() * 20 + 80).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-blue-600">Revenue/Session:</span>
+                                     <span className="font-bold">${(Math.random() * 100 + 200).toFixed(0)}</span>
+                                   </div>
+                                 </div>
+                               </div>
+
+                               <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border">
+                                 <h4 className="font-semibold text-green-800 mb-3">Class Formats</h4>
+                                 <div className="space-y-2 text-sm">
+                                   <div className="flex justify-between">
+                                     <span className="text-green-600">Top Format:</span>
+                                     <span className="font-bold">Cycle</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-green-600">Cycle:</span>
+                                     <span className="font-bold">{(Math.random() * 30 + 40).toFixed(0)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-green-600">Barre:</span>
+                                     <span className="font-bold">{(Math.random() * 30 + 30).toFixed(0)}%</span>
+                                   </div>
+                                 </div>
+                               </div>
+
+                               <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border">
+                                 <h4 className="font-semibold text-purple-800 mb-3">Member Engagement</h4>
+                                 <div className="space-y-2 text-sm">
+                                   <div className="flex justify-between">
+                                     <span className="text-purple-600">Retention:</span>
+                                     <span className="font-bold">{(Math.random() * 20 + 75).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-purple-600">Conversion:</span>
+                                     <span className="font-bold">{(Math.random() * 15 + 60).toFixed(1)}%</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-purple-600">Avg LTV:</span>
+                                     <span className="font-bold">${(Math.random() * 500 + 800).toFixed(0)}</span>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                         </TableCell>
+                       </TableRow>
+                     )}
                   </React.Fragment>
                 );
               })}

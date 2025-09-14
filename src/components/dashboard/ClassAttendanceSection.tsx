@@ -5,14 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, BarChart3, Users, Target, Filter, MapPin, Building2, Home } from 'lucide-react';
-import { useSessionsData, SessionData } from '@/hooks/useSessionsData';
+import { useSessionsData, SessionData } from '@/hooks/useSessionsDataDemo';
 import { useFilteredSessionsData } from '@/hooks/useFilteredSessionsData';
 import { ClassAttendanceFilterSection } from './ClassAttendanceFilterSection';
 import { EnhancedClassAttendanceMetricCards } from './EnhancedClassAttendanceMetricCards';
-import { EnhancedClassFormatRankings } from './EnhancedClassFormatRankings';
-import { ClassFormatComparison } from './ClassFormatComparison';
-import { EnhancedHostedClassesTable } from './EnhancedHostedClassesTable';
-import { ClassFormatAnalysisTable } from './ClassFormatAnalysisTable';
+import { ClassAttendanceInteractiveCharts } from './ClassAttendanceInteractiveCharts';
+import { ClassAttendancePerformanceTable } from './ClassAttendancePerformanceTable';
+import { ClassAttendanceMonthOnMonthTable } from './ClassAttendanceMonthOnMonthTable';
+import { usePayrollData } from '@/hooks/usePayrollData';
+import { ClassAttendanceUtilizationTable } from './ClassAttendanceUtilizationTable';
+import { ClassAttendanceRevenueTable } from './ClassAttendanceRevenueTable';
+import { ClassAttendanceEfficiencyTable } from './ClassAttendanceEfficiencyTable';
+import { ClassPerformanceRankingTable } from './ClassPerformanceRankingTable';
+import { ClassAttendancePayrollTable } from './ClassAttendancePayrollTable';
 import { useNavigate } from 'react-router-dom';
 
 const locations = [{
@@ -36,6 +41,7 @@ const locations = [{
 export const ClassAttendanceSection: React.FC = () => {
   const navigate = useNavigate();
   const { data: sessionsData, loading, error, refetch } = useSessionsData();
+  const { data: payrollData, isLoading: payrollLoading } = usePayrollData();
   const [activeLocation, setActiveLocation] = useState('all');
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [compareWithTrainer, setCompareWithTrainer] = useState(false);
@@ -79,59 +85,58 @@ export const ClassAttendanceSection: React.FC = () => {
     );
   }, [locationFilteredData]);
 
-  if (loading) {
+  if (loading || payrollLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading class attendance data...</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
+      <Card>
+        <CardContent className="p-8 text-center">
           <p className="text-red-600 mb-4">Error loading data: {error}</p>
           <Button onClick={refetch} variant="outline">Retry</Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!sessionsData || sessionsData.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
+      <Card>
+        <CardContent className="p-8 text-center">
           <p className="text-slate-600">No class attendance data available</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-6 py-8">
+    <div className="space-y-8">
         {/* Filter Section */}
         <ClassAttendanceFilterSection data={sessionsData || []} />
 
         {/* Location Tabs */}
         <Tabs value={activeLocation} onValueChange={setActiveLocation} className="w-full">
           <div className="flex justify-center mb-8">
-            <TabsList className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-xl border-0 grid grid-cols-4 w-full max-w-3xl overflow-hidden">
+            <TabsList className="glass-morphism p-2 rounded-2xl shadow-lg border-0 grid grid-cols-4 w-full max-w-4xl">
               {locations.map(location => (
                 <TabsTrigger 
                   key={location.id} 
                   value={location.id} 
-                  className="relative rounded-xl px-6 py-4 font-semibold text-sm transition-all duration-300 ease-out hover:scale-105 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50"
+                  className="tab-modern"
                 >
                   <div className="flex items-center gap-2">
                     {location.id === 'all' ? <Building2 className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
                     <div className="text-center">
                       <div className="font-bold">{location.name.split(',')[0]}</div>
-                      {location.name.includes(',') && <div className="text-xs opacity-80">{location.name.split(',')[1]?.trim()}</div>}
+                      {location.name.includes(',') && <div className="text-xs opacity-75">{location.name.split(',')[1]?.trim()}</div>}
                     </div>
                   </div>
                 </TabsTrigger>
@@ -141,30 +146,62 @@ export const ClassAttendanceSection: React.FC = () => {
 
           {locations.map(location => (
             <TabsContent key={location.id} value={location.id} className="space-y-8">
-              {/* Enhanced Metrics Cards */}
-              <EnhancedClassAttendanceMetricCards data={locationFilteredData} />
+              {/* Key Metric Cards */}
+              <EnhancedClassAttendanceMetricCards data={locationFilteredData} payrollData={payrollData || []} />
 
-              {/* Enhanced Class Format Rankings */}
-              <EnhancedClassFormatRankings data={locationFilteredData} />
+              {/* Interactive Charts Section */}
+              <ClassAttendanceInteractiveCharts data={locationFilteredData} />
 
-              {/* Class Format Comparison */}
-              <ClassFormatComparison 
-                data={locationFilteredData}
-                selectedFormats={selectedFormats}
-                onFormatsChange={setSelectedFormats}
-                compareWithTrainer={compareWithTrainer}
-                onCompareWithTrainerChange={setCompareWithTrainer}
-              />
+              {/* Analytics Tables Tabs */}
+              <Tabs defaultValue="performance" className="w-full">
+                <div className="flex justify-center mb-6">
+                  <TabsList className="glass-morphism p-2 rounded-2xl shadow-lg border-0 grid grid-cols-4 w-full max-w-4xl">
+                    <TabsTrigger value="performance" className="tab-modern">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        <span>Performance Ranking</span>
+                      </div>
+                    </TabsTrigger>
+                    <TabsTrigger value="format" className="tab-modern">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        <span>Format Analysis</span>
+                      </div>
+                    </TabsTrigger>
+                    <TabsTrigger value="payroll" className="tab-modern">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        <span>Payroll Analysis</span>
+                      </div>
+                    </TabsTrigger>
+                    <TabsTrigger value="trends" className="tab-modern">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        <span>Monthly Trends</span>
+                      </div>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
-              {/* Class Format Analysis Table with Multiple Views */}
-              <ClassFormatAnalysisTable data={locationFilteredData} />
+                <TabsContent value="performance">
+                  <ClassPerformanceRankingTable data={locationFilteredData} location={activeLocation} />
+                </TabsContent>
 
-              {/* Enhanced Hosted Classes Table */}
-              <EnhancedHostedClassesTable data={hostedClasses} />
+                <TabsContent value="format">
+                  <ClassAttendancePerformanceTable data={locationFilteredData} location={activeLocation} />
+                </TabsContent>
+
+                <TabsContent value="payroll">
+                  <ClassAttendancePayrollTable data={payrollData || []} location={activeLocation} />
+                </TabsContent>
+
+                <TabsContent value="trends">
+                  <ClassAttendanceMonthOnMonthTable data={locationFilteredData} payrollData={payrollData || []} location={activeLocation} />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           ))}
         </Tabs>
-      </div>
     </div>
   );
 };

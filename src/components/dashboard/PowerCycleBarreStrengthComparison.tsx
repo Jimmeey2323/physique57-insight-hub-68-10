@@ -1,236 +1,303 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Users, Target, Calendar, Zap, Activity, Dumbbell, Crown, Trophy, Award, DollarSign, BarChart3 } from 'lucide-react';
-import { formatNumber, formatCurrency } from '@/utils/formatters';
-import { PayrollData } from '@/types/dashboard';
+import { 
+  Activity, 
+  Users, 
+  DollarSign, 
+  Target,
+  TrendingUp,
+  Clock,
+  MapPin
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from 'recharts';
+import { formatCurrency, formatNumber, formatPercentage } from '@/utils/formatters';
 
 interface PowerCycleBarreStrengthComparisonProps {
-  data: PayrollData[];
-  onItemClick?: (item: any) => void;
+  data: {
+    sessions: any[];
+    payroll: any[];
+    sales: any[];
+  };
 }
 
-export const PowerCycleBarreStrengthComparison: React.FC<PowerCycleBarreStrengthComparisonProps> = ({
-  data,
-  onItemClick
-}) => {
-  console.log('PowerCycleBarreStrengthComparison received data:', data.length, 'items');
-  
-  const comparisonData = useMemo(() => {
-    if (!data || data.length === 0) {
-      return {
-        powerCycle: { sessions: 0, customers: 0, revenue: 0, avgCustomersPerSession: 0, emptySessions: 0, nonEmptySessions: 0 },
-        barre: { sessions: 0, customers: 0, revenue: 0, avgCustomersPerSession: 0, emptySessions: 0, nonEmptySessions: 0 },
-        strength: { sessions: 0, customers: 0, revenue: 0, avgCustomersPerSession: 0, emptySessions: 0, nonEmptySessions: 0 }
-      };
-    }
+const COLORS = {
+  'Power Cycle': '#8B5CF6',
+  'Barre': '#06B6D4', 
+  'Strength': '#10B981'
+};
 
-    const powerCycle = {
-      sessions: data.reduce((sum, item) => sum + (item.cycleSessions || 0), 0),
-      customers: data.reduce((sum, item) => sum + (item.cycleCustomers || 0), 0),
-      revenue: data.reduce((sum, item) => sum + (item.cyclePaid || 0), 0),
-      emptySessions: data.reduce((sum, item) => sum + (item.emptyCycleSessions || 0), 0),
-      nonEmptySessions: data.reduce((sum, item) => sum + (item.nonEmptyCycleSessions || 0), 0),
-      avgCustomersPerSession: 0
-    };
+export const PowerCycleBarreStrengthComparison: React.FC<PowerCycleBarreStrengthComparisonProps> = ({ data }) => {
+  // Process session data by class type
+  const classComparison = useMemo(() => {
+    const sessionsByType = data.sessions.reduce((acc, session) => {
+      const classType = session.cleanedClass || 'Unknown';
+      
+      // Categorize class types
+      let category = 'Other';
+      if (classType.toLowerCase().includes('cycle') || classType.toLowerCase().includes('spinning')) {
+        category = 'Power Cycle';
+      } else if (classType.toLowerCase().includes('barre')) {
+        category = 'Barre';
+      } else if (classType.toLowerCase().includes('strength') || classType.toLowerCase().includes('weights')) {
+        category = 'Strength';
+      }
+      
+      if (!acc[category]) {
+        acc[category] = {
+          category,
+          sessions: 0,
+          totalAttendance: 0,
+          totalCapacity: 0,
+          revenue: 0,
+          uniqueInstructors: new Set()
+        };
+      }
+      
+      acc[category].sessions += 1;
+      acc[category].totalAttendance += session.checkedInCount || 0;
+      acc[category].totalCapacity += session.capacity || 0;
+      acc[category].uniqueInstructors.add(session.instructor);
+      
+      return acc;
+    }, {} as Record<string, any>);
 
-    const barre = {
-      sessions: data.reduce((sum, item) => sum + (item.barreSessions || 0), 0),
-      customers: data.reduce((sum, item) => sum + (item.barreCustomers || 0), 0),
-      revenue: data.reduce((sum, item) => sum + (item.barrePaid || 0), 0),
-      emptySessions: data.reduce((sum, item) => sum + (item.emptyBarreSessions || 0), 0),
-      nonEmptySessions: data.reduce((sum, item) => sum + (item.nonEmptyBarreSessions || 0), 0),
-      avgCustomersPerSession: 0
-    };
+    // Add revenue data from payroll
+    data.payroll.forEach(payroll => {
+      if (payroll.cycleSessions > 0) {
+        if (!sessionsByType['Power Cycle']) sessionsByType['Power Cycle'] = { category: 'Power Cycle', sessions: 0, totalAttendance: 0, totalCapacity: 0, revenue: 0, uniqueInstructors: new Set() };
+        sessionsByType['Power Cycle'].revenue += payroll.cyclePaid || 0;
+      }
+      if (payroll.barreSessions > 0) {
+        if (!sessionsByType['Barre']) sessionsByType['Barre'] = { category: 'Barre', sessions: 0, totalAttendance: 0, totalCapacity: 0, revenue: 0, uniqueInstructors: new Set() };
+        sessionsByType['Barre'].revenue += payroll.barrePaid || 0;
+      }
+      if (payroll.strengthSessions > 0) {
+        if (!sessionsByType['Strength']) sessionsByType['Strength'] = { category: 'Strength', sessions: 0, totalAttendance: 0, totalCapacity: 0, revenue: 0, uniqueInstructors: new Set() };
+        sessionsByType['Strength'].revenue += payroll.strengthPaid || 0;
+      }
+    });
 
-    const strength = {
-      sessions: data.reduce((sum, item) => sum + (item.strengthSessions || 0), 0),
-      customers: data.reduce((sum, item) => sum + (item.strengthCustomers || 0), 0),
-      revenue: data.reduce((sum, item) => sum + (item.strengthPaid || 0), 0),
-      emptySessions: data.reduce((sum, item) => sum + (item.emptyStrengthSessions || 0), 0),
-      nonEmptySessions: data.reduce((sum, item) => sum + (item.nonEmptyStrengthSessions || 0), 0),
-      avgCustomersPerSession: 0
-    };
+    return Object.values(sessionsByType)
+      .filter((item: any) => ['Power Cycle', 'Barre', 'Strength'].includes(item.category))
+      .map((item: any) => ({
+        ...item,
+        avgAttendance: item.sessions > 0 ? item.totalAttendance / item.sessions : 0,
+        fillRate: item.totalCapacity > 0 ? (item.totalAttendance / item.totalCapacity) * 100 : 0,
+        instructorCount: item.uniqueInstructors.size,
+        revenuePerSession: item.sessions > 0 ? item.revenue / item.sessions : 0
+      }));
+  }, [data.sessions, data.payroll]);
 
-    // Calculate averages
-    powerCycle.avgCustomersPerSession = powerCycle.sessions > 0 ? powerCycle.customers / powerCycle.sessions : 0;
-    barre.avgCustomersPerSession = barre.sessions > 0 ? barre.customers / barre.sessions : 0;
-    strength.avgCustomersPerSession = strength.sessions > 0 ? strength.customers / strength.sessions : 0;
-
-    return { powerCycle, barre, strength };
-  }, [data]);
-
-  const getWinner = (pcValue: number, barreValue: number, strengthValue: number, lowerIsBetter = false) => {
-    if (pcValue >= barreValue && pcValue >= strengthValue) return 'powercycle';
-    if (barreValue >= strengthValue) return 'barre';
-    return 'strength';
-  };
-
-  const comparisonMetrics = [
-    {
-      metric: 'Total Sessions',
-      powerCycle: comparisonData.powerCycle.sessions,
-      barre: comparisonData.barre.sessions,
-      strength: comparisonData.strength.sessions,
-      icon: Calendar,
-      format: 'number'
-    },
-    {
-      metric: 'Total Customers',
-      powerCycle: comparisonData.powerCycle.customers,
-      barre: comparisonData.barre.customers,
-      strength: comparisonData.strength.customers,
-      icon: Users,
-      format: 'number'
-    },
-    {
-      metric: 'Total Revenue',
-      powerCycle: comparisonData.powerCycle.revenue,
-      barre: comparisonData.barre.revenue,
-      strength: comparisonData.strength.revenue,
-      icon: Target,
-      format: 'currency'
-    },
-    {
-      metric: 'Avg Customers/Session',
-      powerCycle: comparisonData.powerCycle.avgCustomersPerSession,
-      barre: comparisonData.barre.avgCustomersPerSession,
-      strength: comparisonData.strength.avgCustomersPerSession,
-      icon: Activity,
-      format: 'decimal'
-    },
-    {
-      metric: 'Empty Sessions',
-      powerCycle: comparisonData.powerCycle.emptySessions,
-      barre: comparisonData.barre.emptySessions,
-      strength: comparisonData.strength.emptySessions,
-      icon: TrendingDown,
-      format: 'number',
-      lowerIsBetter: true
-    },
-    {
-      metric: 'Revenue per Customer',
-      powerCycle: comparisonData.powerCycle.customers > 0 ? comparisonData.powerCycle.revenue / comparisonData.powerCycle.customers : 0,
-      barre: comparisonData.barre.customers > 0 ? comparisonData.barre.revenue / comparisonData.barre.customers : 0,
-      strength: comparisonData.strength.customers > 0 ? comparisonData.strength.revenue / comparisonData.strength.customers : 0,
-      icon: DollarSign,
-      format: 'currency'
-    }
-  ];
-
-  const formatValue = (value: number, format: string) => {
-    switch (format) {
-      case 'currency':
-        return formatCurrency(value);
-      case 'decimal':
-        return value.toFixed(1);
-      case 'number':
-      default:
-        return formatNumber(value);
-    }
-  };
-
-  const getWinnerBadge = (winner: string) => {
-    switch (winner) {
-      case 'powercycle':
-        return <Badge className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold shadow-md"><Crown className="w-3 h-3 mr-1" />PowerCycle</Badge>;
-      case 'barre':
-        return <Badge className="bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold shadow-md"><Trophy className="w-3 h-3 mr-1" />Barre</Badge>;
-      case 'strength':
-        return <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold shadow-md"><Award className="w-3 h-3 mr-1" />Strength</Badge>;
-      default:
-        return <Badge variant="outline">Tie</Badge>;
-    }
-  };
+  // Performance metrics for each category
+  const performanceMetrics = useMemo(() => {
+    return classComparison.map(item => ({
+      category: item.category,
+      sessions: item.sessions,
+      attendance: item.totalAttendance,
+      avgAttendance: item.avgAttendance,
+      fillRate: item.fillRate,
+      revenue: item.revenue,
+      instructors: item.instructorCount,
+      color: COLORS[item.category as keyof typeof COLORS] || '#9CA3AF'
+    }));
+  }, [classComparison]);
 
   return (
-    <Card className="bg-gradient-to-br from-white via-slate-50/30 to-white border-0 shadow-xl overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-        <CardTitle className="text-xl font-bold flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-            <BarChart3 className="w-5 h-5" />
-          </div>
-          PowerCycle vs Barre vs Strength Comparison
-          <Badge className="bg-white/20 text-white border-white/30">
-            {data.length} trainers
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {comparisonMetrics.map((item, index) => {
-            const winner = getWinner(
-              item.powerCycle, 
-              item.barre, 
-              item.strength,
-              item.lowerIsBetter
-            );
-            
-            return (
-              <div 
-                key={index} 
-                className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer"
-                onClick={() => onItemClick?.({ type: 'comparison', metric: item.metric, data: item })}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-800">{item.metric}</h3>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-600">PowerCycle</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-lg text-gray-800">
-                        {formatValue(item.powerCycle, item.format)}
-                      </span>
-                      {winner === 'powercycle' && getWinnerBadge(winner)}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gradient-to-r from-pink-500 to-rose-600 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-600">Barre</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-lg text-gray-800">
-                        {formatValue(item.barre, item.format)}
-                      </span>
-                      {winner === 'barre' && getWinnerBadge(winner)}
-                    </div>
-                  </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <Activity className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-gray-900">
+                PowerCycle vs Barre vs Strength Analysis
+              </span>
+              <p className="text-gray-600 font-normal">
+                Comprehensive performance comparison across class formats
+              </p>
+            </div>
+          </CardTitle>
+        </CardHeader>
+      </Card>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gradient-to-r from-orange-500 to-red-600 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-600">Strength</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-lg text-gray-800">
-                        {formatValue(item.strength, item.format)}
-                      </span>
-                      {winner === 'strength' && getWinnerBadge(winner)}
-                    </div>
-                  </div>
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {performanceMetrics.map((metric) => (
+          <Card key={metric.category} className="bg-white shadow-xl border-0 overflow-hidden">
+            <CardContent className="p-0">
+              <div 
+                className="p-6 text-white relative overflow-hidden"
+                style={{ backgroundColor: metric.color }}
+              >
+                <div className="absolute top-0 right-0 w-20 h-20 transform translate-x-8 -translate-y-8 opacity-20">
+                  <Activity className="w-20 h-20" />
+                </div>
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-bold mb-4">{metric.category}</h3>
                   
-                  <div className="pt-2 border-t border-gray-100">
-                    <div className="text-xs text-gray-500 text-center">
-                      Best: {winner === 'powercycle' ? 'PowerCycle' : winner === 'barre' ? 'Barre' : 'Strength'}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Sessions</span>
+                      <span className="font-bold">{formatNumber(metric.sessions)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Total Attendance</span>
+                      <span className="font-bold">{formatNumber(metric.attendance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Avg per Session</span>
+                      <span className="font-bold">{metric.avgAttendance.toFixed(1)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Fill Rate</span>
+                      <span className="font-bold">{formatPercentage(metric.fillRate)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Revenue</span>
+                      <span className="font-bold">{formatCurrency(metric.revenue)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm opacity-90">Instructors</span>
+                      <span className="font-bold">{metric.instructors}</span>
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Comparison Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sessions Comparison */}
+        <Card className="bg-white shadow-xl border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-purple-600" />
+              Sessions & Attendance Comparison
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={performanceMetrics}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="sessions" fill="#8B5CF6" name="Sessions" />
+                <Bar dataKey="attendance" fill="#06B6D4" name="Total Attendance" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Revenue Comparison */}
+        <Card className="bg-white shadow-xl border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Revenue Comparison
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={performanceMetrics}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="revenue" fill="#10B981" name="Revenue ($)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Fill Rate Distribution */}
+        <Card className="bg-white shadow-xl border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Fill Rate Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={performanceMetrics}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => `${entry.category}: ${formatPercentage(entry.fillRate)}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="fillRate"
+                >
+                  {performanceMetrics.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: any) => [`${value.toFixed(1)}%`, 'Fill Rate']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Performance Summary Table */}
+        <Card className="bg-white shadow-xl border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-orange-600" />
+              Performance Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {performanceMetrics.map((metric) => (
+                <div 
+                  key={metric.category}
+                  className="flex items-center justify-between p-4 rounded-lg border-l-4"
+                  style={{ borderLeftColor: metric.color, backgroundColor: `${metric.color}10` }}
+                >
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{metric.category}</h4>
+                    <div className="flex gap-4 text-sm text-gray-600">
+                      <span>{formatNumber(metric.sessions)} sessions</span>
+                      <span>{formatNumber(metric.attendance)} attendees</span>
+                      <span>{formatPercentage(metric.fillRate)} fill rate</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-lg">{formatCurrency(metric.revenue)}</p>
+                    <p className="text-sm text-gray-600">{metric.instructors} instructors</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };

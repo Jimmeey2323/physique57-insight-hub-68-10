@@ -7,7 +7,7 @@ import { UnifiedTopBottomSellers } from './UnifiedTopBottomSellers';
 import { DataTable } from './DataTable';
 import { InteractiveChart } from './InteractiveChart';
 import { ThemeSelector } from './ThemeSelector';
-import { DrillDownModal } from './DrillDownModal';
+import { EnhancedSalesDrillDownModal } from './EnhancedSalesDrillDownModal';
 import { EnhancedYearOnYearTable } from './EnhancedYearOnYearTable';
 import { MonthOnMonthTable } from './MonthOnMonthTable';
 import { ProductPerformanceTable } from './ProductPerformanceTable';
@@ -16,17 +16,24 @@ import { SalesAnimatedMetricCards } from './SalesAnimatedMetricCards';
 import { SalesInteractiveCharts } from './SalesInteractiveCharts';
 import { SoldByMonthOnMonthTable } from './SoldByMonthOnMonthTable';
 import { PaymentMethodMonthOnMonthTable } from './PaymentMethodMonthOnMonthTable';
+import { SalesHeroSection } from './SalesHeroSection';
 import { NoteTaker } from '@/components/ui/NoteTaker';
+import { ModernSalesTable } from './ModernSalesTable';
 import { SalesData, FilterOptions, MetricCardData, YearOnYearMetricType } from '@/types/dashboard';
-import { formatCurrency, formatNumber, formatPercentage } from '@/utils/formatters';
+import { formatCurrency, formatNumber, formatPercentage, formatDiscount } from '@/utils/formatters';
 import { getPreviousMonthDateRange } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
+import { AdvancedExportButton } from '@/components/ui/AdvancedExportButton';
 
 interface SalesAnalyticsSectionProps {
   data: SalesData[];
 }
 
 const locations = [{
+  id: 'all',
+  name: 'All Locations',
+  fullName: 'All Locations'
+}, {
   id: 'kwality',
   name: 'Kwality House, Kemps Corner',
   fullName: 'Kwality House, Kemps Corner'
@@ -41,7 +48,7 @@ const locations = [{
 }];
 
 export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ data }) => {
-  const [activeLocation, setActiveLocation] = useState('kwality');
+  const [activeLocation, setActiveLocation] = useState('all');
   const [currentTheme, setCurrentTheme] = useState('classic');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [drillDownData, setDrillDownData] = useState<any>(null);
@@ -71,21 +78,28 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
     let filtered = [...rawData];
 
     // Apply location filter
-    filtered = filtered.filter(item => {
-      const locationMatch = activeLocation === 'kwality' 
-        ? item.calculatedLocation === 'Kwality House, Kemps Corner' 
-        : activeLocation === 'supreme' 
-        ? item.calculatedLocation === 'Supreme HQ, Bandra' 
-        : item.calculatedLocation?.includes('Kenkere') || item.calculatedLocation === 'Kenkere House';
-      return locationMatch;
-    });
+    if (activeLocation !== 'all') {
+      filtered = filtered.filter(item => {
+        const locationMatch = activeLocation === 'kwality' 
+          ? item.calculatedLocation === 'Kwality House, Kemps Corner' 
+          : activeLocation === 'supreme' 
+          ? item.calculatedLocation === 'Supreme HQ, Bandra' 
+          : item.calculatedLocation?.includes('Kenkere') || item.calculatedLocation === 'Kenkere House';
+        return locationMatch;
+      });
+    }
 
     console.log('After location filter:', filtered.length, 'records');
 
     // Apply date range filter
     if (!includeHistoric && (filters.dateRange.start || filters.dateRange.end)) {
       const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
-      const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
+      const endDate = filters.dateRange.end ? (() => {
+        const date = new Date(filters.dateRange.end);
+        // Set to end of day to include all transactions on the end date
+        date.setHours(23, 59, 59, 999);
+        return date;
+      })() : null;
       
       console.log('Applying date filter:', startDate, 'to', endDate);
       
@@ -174,30 +188,164 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
 
   const handleRowClick = (rowData: any) => {
     console.log('Row clicked with data:', rowData);
-    // Enhance the drill down data with filtered raw data
+    console.log('Available properties in rowData:', Object.keys(rowData));
+    
+    // More specific filtering based on the exact row data
+    let specificFilteredData = filteredData;
+    let drillDownTypeToSet: 'metric' | 'product' | 'category' | 'member' = 'product';
+    
+    // If we have transaction data already attached to the row, use that
+    if (rowData.rawData && Array.isArray(rowData.rawData) && rowData.rawData.length > 0) {
+      specificFilteredData = rowData.rawData;
+      console.log(`Using pre-filtered rawData: ${specificFilteredData.length} transactions`);
+    } else if (Array.isArray(rowData) && rowData.length > 0) {
+      // If rowData itself is an array of transactions, use it directly
+      specificFilteredData = rowData;
+      console.log(`Using rowData array directly: ${specificFilteredData.length} transactions`);
+    } else if (rowData.transactionData && Array.isArray(rowData.transactionData) && rowData.transactionData.length > 0) {
+      specificFilteredData = rowData.transactionData;
+      console.log(`Using pre-filtered transactionData: ${specificFilteredData.length} transactions`);
+    } else if (rowData.currentYearRawData && rowData.lastYearRawData) {
+      // For Year-on-Year data, combine current and last year data for this specific product/category
+      specificFilteredData = [...rowData.currentYearRawData, ...rowData.lastYearRawData];
+      console.log(`Using YoY data: ${rowData.currentYearRawData.length} current year + ${rowData.lastYearRawData.length} last year transactions`);
+    } else {
+      // Apply specific filters based on row properties as fallback
+      specificFilteredData = filteredData.filter(item => {
+        let matches = false; // Start with false and require at least one match
+        
+        // Try multiple possible property names for product matching
+        const productIdentifiers = [
+          rowData.name,
+          rowData.product,
+          rowData.productName,
+          rowData.paymentItem,
+          rowData.cleanedProduct,
+          rowData.membership,
+          rowData.membershipType,
+          rowData.item
+        ].filter(Boolean);
+        
+        const categoryIdentifiers = [
+          rowData.category,
+          rowData.cleanedCategory,
+          rowData.paymentCategory
+        ].filter(Boolean);
+        
+        console.log('Product identifiers to match:', productIdentifiers);
+        console.log('Category identifiers to match:', categoryIdentifiers);
+        
+        // Product-specific filtering - try exact matches
+        for (const identifier of productIdentifiers) {
+          if (item.cleanedProduct === identifier || 
+              item.paymentItem === identifier ||
+              item.membershipType === identifier ||
+              (item.paymentItem && item.paymentItem.includes(identifier)) ||
+              (item.cleanedProduct && item.cleanedProduct.includes(identifier))) {
+            matches = true;
+            console.log(`Product match found: ${identifier} matches item ${item.paymentItem || item.cleanedProduct}`);
+            break;
+          }
+        }
+        
+        // Category-specific filtering if no product match
+        if (!matches) {
+          for (const identifier of categoryIdentifiers) {
+            if (item.cleanedCategory === identifier ||
+                item.paymentCategory === identifier ||
+                (item.cleanedCategory && item.cleanedCategory.includes(identifier))) {
+              matches = true;
+              drillDownTypeToSet = 'category';
+              console.log(`Category match found: ${identifier} matches item ${item.cleanedCategory}`);
+              break;
+            }
+          }
+        }
+        
+        // Sales rep specific filtering
+        if (rowData.soldBy && item.soldBy === rowData.soldBy) {
+          matches = true;
+          drillDownTypeToSet = 'member';
+        }
+        
+        // Payment method specific filtering
+        if (rowData.paymentMethod && item.paymentMethod === rowData.paymentMethod) {
+          matches = true;
+          drillDownTypeToSet = 'product';
+        }
+        
+        return matches;
+      });
+      console.log(`Using fallback filtering: ${specificFilteredData.length} transactions from ${filteredData.length} total`);
+      
+    }
+    
+    console.log(`Filtered ${specificFilteredData.length} transactions for drill-down from ${filteredData.length} total`);
+    
     const enhancedData = {
       ...rowData,
-      rawData: filteredData.filter(item => {
-        if (rowData.soldBy) return item.soldBy === rowData.soldBy;
-        if (rowData.paymentMethod) return item.paymentMethod === rowData.paymentMethod;
-        if (rowData.name) return item.cleanedProduct === rowData.name || item.cleanedCategory === rowData.name;
-        return true;
-      })
+      rawData: specificFilteredData,
+      filteredTransactionData: specificFilteredData,
+      // Calculate specific metrics for this filtered data and override any static values
+      totalRevenue: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      grossRevenue: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      netRevenue: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      totalValue: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      totalCurrent: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      metricValue: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      transactions: specificFilteredData.length,
+      totalTransactions: specificFilteredData.length,
+      uniqueMembers: new Set(specificFilteredData.map(item => item.memberId || item.customerEmail)).size,
+      totalCustomers: new Set(specificFilteredData.map(item => item.memberId || item.customerEmail)).size,
+      specificRevenue: specificFilteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
+      specificTransactions: specificFilteredData.length,
+      specificCustomers: new Set(specificFilteredData.map(item => item.memberId || item.customerEmail)).size,
+      specificProducts: new Set(specificFilteredData.map(item => item.cleanedProduct || item.paymentItem)).size,
+      // Add dynamic calculation flags to ensure modal uses fresh data
+      isDynamic: true,
+      calculatedFromFiltered: true
     };
+    
     setDrillDownData(enhancedData);
-    setDrillDownType('product');
+    setDrillDownType(drillDownTypeToSet);
   };
 
   const handleMetricClick = (metricData: any) => {
     console.log('Metric clicked with data:', metricData);
-    // Enhance metric data with raw sales data
+    
+    // For metric clicks, use the filtered data to ensure responsiveness to filters
+    const specificData = filteredData;
+    
+    // Calculate fresh metrics from the current filtered data
+    const dynamicRevenue = specificData.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
+    const dynamicTransactions = specificData.length;
+    const dynamicCustomers = new Set(specificData.map(item => item.memberId || item.customerEmail)).size;
+    
+    // Enhance metric data with dynamic calculations
     const enhancedData = {
       ...metricData,
-      rawData: filteredData,
-      grossRevenue: filteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0),
-      transactions: filteredData.length,
-      uniqueMembers: new Set(filteredData.map(item => item.memberId)).size
+      rawData: specificData,
+      filteredTransactionData: specificData,
+      // Override with dynamic values
+      totalRevenue: dynamicRevenue,
+      grossRevenue: dynamicRevenue,
+      netRevenue: dynamicRevenue,
+      totalValue: dynamicRevenue,
+      totalCurrent: dynamicRevenue,
+      metricValue: dynamicRevenue,
+      transactions: dynamicTransactions,
+      totalTransactions: dynamicTransactions,
+      uniqueMembers: dynamicCustomers,
+      totalCustomers: dynamicCustomers,
+      specificRevenue: dynamicRevenue,
+      specificTransactions: dynamicTransactions,
+      specificCustomers: dynamicCustomers,
+      // Add flags to indicate this is dynamically calculated
+      isDynamic: true,
+      calculatedFromFiltered: true
     };
+    
+    console.log(`Metric drill-down with ${specificData.length} filtered transactions, revenue: ${dynamicRevenue}`);
     setDrillDownData(enhancedData);
     setDrillDownType('metric');
   };
@@ -227,14 +375,19 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
 
   return (
     <div className="space-y-8">
+      {/* Hero Section with Dynamic Metrics */}
+      <SalesHeroSection data={filteredData} />
+
       {/* Note Taker Component */}
-      <NoteTaker />
+      <div className="container mx-auto px-6">
+        <NoteTaker />
+      </div>
 
       {/* Filter and Location Tabs */}
-      <div className="space-y-6">
+      <div className="container mx-auto px-6 space-y-6">
         <Tabs value={activeLocation} onValueChange={setActiveLocation} className="w-full">
           <div className="flex justify-center mb-8">
-            <TabsList className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-xl border-0 grid grid-cols-3 w-full max-w-7xl min-h-24 overflow-hidden">
+            <TabsList className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-xl border-0 grid grid-cols-4 w-full max-w-7xl min-h-24 overflow-hidden">
               {locations.map(location => (
                 <TabsTrigger 
                   key={location.id} 
@@ -252,11 +405,13 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
 
           {locations.map(location => (
             <TabsContent key={location.id} value={location.id} className="space-y-8">
-              <AutoCloseFilterSection 
-                filters={filters} 
-                onFiltersChange={setFilters} 
-                onReset={resetFilters} 
-              />
+              <div className="w-full">
+                <AutoCloseFilterSection
+                  filters={filters} 
+                  onFiltersChange={setFilters} 
+                  onReset={resetFilters} 
+                />
+              </div>
 
               <SalesAnimatedMetricCards 
                 data={filteredData} 
@@ -267,14 +422,14 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
 
               <UnifiedTopBottomSellers data={filteredData} />
 
-              <Tabs defaultValue="yearOnYear" className="w-full">
-                <TabsList className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-xl border-0 grid grid-cols-6 w-full max-w-6xl mx-auto overflow-hidden">
-                  <TabsTrigger value="yearOnYear" className="relative rounded-xl px-4 py-3 font-semibold text-xs transition-all duration-300 ease-out hover:scale-105 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50">
-                    Year-on-Year
-                  </TabsTrigger>
-                  <TabsTrigger value="monthOnMonth" className="relative rounded-xl px-4 py-3 font-semibold text-xs transition-all duration-300 ease-out hover:scale-105 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50">
-                    Month-on-Month
-                  </TabsTrigger>
+                <Tabs defaultValue="monthOnMonth" className="w-full">
+                  <TabsList className="bg-white/90 backdrop-blur-sm p-2 rounded-2xl shadow-xl border-0 grid grid-cols-6 w-full max-w-6xl mx-auto overflow-hidden">
+                    <TabsTrigger value="monthOnMonth" className="relative rounded-xl px-4 py-3 font-semibold text-xs transition-all duration-300 ease-out hover:scale-105 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50">
+                      Month-on-Month
+                    </TabsTrigger>
+                    <TabsTrigger value="yearOnYear" className="relative rounded-xl px-4 py-3 font-semibold text-xs transition-all duration-300 ease-out hover:scale-105 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50">
+                      Year-on-Year
+                    </TabsTrigger>
                   <TabsTrigger value="productPerformance" className="relative rounded-xl px-4 py-3 font-semibold text-xs transition-all duration-300 ease-out hover:scale-105 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50">
                     Product Performance
                   </TabsTrigger>
@@ -289,29 +444,29 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="yearOnYear" className="mt-8">
-                  <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-gray-900">Year-on-Year Analysis</h2>
-                    <EnhancedYearOnYearTable 
-                      data={allHistoricData} 
-                      onRowClick={handleRowClick} 
-                      selectedMetric={activeYoyMetric} 
-                    />
-                  </section>
-                </TabsContent>
+                  <TabsContent value="monthOnMonth" className="mt-8">
+                    <section className="space-y-4">
+                      <h2 className="text-2xl font-bold text-gray-900">Month-on-Month Analysis</h2>
+                      <MonthOnMonthTable 
+                        data={allHistoricData} 
+                        onRowClick={handleRowClick} 
+                        collapsedGroups={collapsedGroups} 
+                        onGroupToggle={handleGroupToggle} 
+                        selectedMetric={activeYoyMetric} 
+                      />
+                    </section>
+                  </TabsContent>
 
-                <TabsContent value="monthOnMonth" className="mt-8">
-                  <section className="space-y-4">
-                    <h2 className="text-2xl font-bold text-gray-900">Month-on-Month Analysis</h2>
-                    <MonthOnMonthTable 
-                      data={allHistoricData} 
-                      onRowClick={handleRowClick} 
-                      collapsedGroups={collapsedGroups} 
-                      onGroupToggle={handleGroupToggle} 
-                      selectedMetric={activeYoyMetric} 
-                    />
-                  </section>
-                </TabsContent>
+                  <TabsContent value="yearOnYear" className="mt-8">
+                    <section className="space-y-4">
+                      <h2 className="text-2xl font-bold text-gray-900">Year-on-Year Analysis</h2>
+                      <EnhancedYearOnYearTable 
+                        data={allHistoricData} 
+                        onRowClick={handleRowClick} 
+                        selectedMetric={activeYoyMetric} 
+                      />
+                    </section>
+                  </TabsContent>
 
                 <TabsContent value="productPerformance" className="mt-8">
                   <section className="space-y-4">
@@ -362,8 +517,9 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
         </Tabs>
       </div>
 
+      {/* Modal */}
       {drillDownData && (
-        <DrillDownModal 
+        <EnhancedSalesDrillDownModal 
           isOpen={!!drillDownData} 
           onClose={() => setDrillDownData(null)} 
           data={drillDownData} 
@@ -374,4 +530,4 @@ export const SalesAnalyticsSection: React.FC<SalesAnalyticsSectionProps> = ({ da
   );
 };
 
-export default SalesAnalyticsSection;
+

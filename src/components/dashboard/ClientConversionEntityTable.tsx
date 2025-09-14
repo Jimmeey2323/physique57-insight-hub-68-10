@@ -18,7 +18,8 @@ export const ClientConversionEntityTable: React.FC<ClientConversionEntityTablePr
       if (!acc[entity]) {
         acc[entity] = {
           entityName: entity,
-          totalMembers: 0,
+          totalClients: 0,
+          newMembers: 0,
           converted: 0,
           retained: 0,
           totalLTV: 0,
@@ -27,9 +28,23 @@ export const ClientConversionEntityTable: React.FC<ClientConversionEntityTablePr
         };
       }
       
-      acc[entity].totalMembers++;
-      if (client.conversionStatus === 'Converted') acc[entity].converted++;
-      if (client.retentionStatus === 'Retained') acc[entity].retained++;
+      acc[entity].totalClients++;
+      
+      // Count new members - only when isNew contains "New" (case sensitive)
+      if ((client.isNew || '').includes('New')) {
+        acc[entity].newMembers++;
+      }
+      
+      // Count converted - exact match for "Converted"
+      if (client.conversionStatus === 'Converted') {
+        acc[entity].converted++;
+      }
+      
+      // Count retained - exact match for "Retained"
+      if (client.retentionStatus === 'Retained') {
+        acc[entity].retained++;
+      }
+      
       acc[entity].totalLTV += client.ltv || 0;
       acc[entity].totalVisits += client.visitsPostTrial || 0;
       acc[entity].totalClasses += client.classNo || 0;
@@ -40,33 +55,44 @@ export const ClientConversionEntityTable: React.FC<ClientConversionEntityTablePr
     return Object.values(entityStats)
       .map((stat: any) => ({
         ...stat,
-        conversionRate: stat.totalMembers > 0 ? (stat.converted / stat.totalMembers) * 100 : 0,
-        retentionRate: stat.totalMembers > 0 ? (stat.retained / stat.totalMembers) * 100 : 0,
-        avgLTV: stat.totalMembers > 0 ? stat.totalLTV / stat.totalMembers : 0,
-        avgVisits: stat.totalMembers > 0 ? stat.totalVisits / stat.totalMembers : 0,
-        avgClasses: stat.totalMembers > 0 ? stat.totalClasses / stat.totalMembers : 0
+        conversionRate: stat.newMembers > 0 ? (stat.converted / stat.newMembers) * 100 : 0,
+        retentionRate: stat.totalClients > 0 ? (stat.retained / stat.totalClients) * 100 : 0,
+        avgLTV: stat.totalClients > 0 ? stat.totalLTV / stat.totalClients : 0,
+        avgVisits: stat.totalClients > 0 ? stat.totalVisits / stat.totalClients : 0,
+        avgClasses: stat.totalClients > 0 ? stat.totalClasses / stat.totalClients : 0
       }))
-      .filter((stat: any) => stat.totalMembers > 0)
-      .sort((a: any, b: any) => b.totalMembers - a.totalMembers);
+      .filter((stat: any) => stat.totalClients > 0)
+      .sort((a: any, b: any) => b.totalClients - a.totalClients);
   }, [data]);
 
   const columns = [
     {
       key: 'entityName' as const,
       header: 'First Visit Entity',
-      className: 'font-semibold min-w-[200px]'
+      className: 'font-medium text-xs min-w-[180px]',
+      render: (value: string) => (
+        <div className="text-xs font-medium text-gray-800 truncate max-w-[180px]" title={value}>
+          {value || 'Unknown Entity'}
+        </div>
+      )
     },
     {
-      key: 'totalMembers' as const,
-      header: 'Total Members',
+      key: 'totalClients' as const,
+      header: 'Total Clients',
       align: 'center' as const,
-      render: (value: number) => <span className="font-semibold text-blue-600">{formatNumber(value)}</span>
+      render: (value: number) => <span className="text-xs font-semibold text-blue-600">{formatNumber(value)}</span>
+    },
+    {
+      key: 'newMembers' as const,
+      header: 'New Members',
+      align: 'center' as const,
+      render: (value: number) => <span className="text-xs font-semibold text-green-600">{formatNumber(value)}</span>
     },
     {
       key: 'converted' as const,
       header: 'Converted',
       align: 'center' as const,
-      render: (value: number) => <span className="font-semibold text-green-600">{formatNumber(value)}</span>
+      render: (value: number) => <span className="text-xs font-semibold text-green-600">{formatNumber(value)}</span>
     },
     {
       key: 'conversionRate' as const,
@@ -75,7 +101,7 @@ export const ClientConversionEntityTable: React.FC<ClientConversionEntityTablePr
       render: (value: number) => (
         <div className="flex items-center justify-center gap-1">
           {value > 30 ? <TrendingUp className="w-3 h-3 text-green-500" /> : value < 10 ? <TrendingDown className="w-3 h-3 text-red-500" /> : null}
-          <span className={`font-semibold ${value > 30 ? 'text-green-600' : value < 10 ? 'text-red-600' : 'text-gray-600'}`}>
+          <span className={`text-xs font-semibold ${value > 30 ? 'text-green-600' : value < 10 ? 'text-red-600' : 'text-gray-600'}`}>
             {value.toFixed(1)}%
           </span>
         </div>
@@ -85,48 +111,35 @@ export const ClientConversionEntityTable: React.FC<ClientConversionEntityTablePr
       key: 'retained' as const,
       header: 'Retained',
       align: 'center' as const,
-      render: (value: number) => <span className="font-semibold text-purple-600">{formatNumber(value)}</span>
+      render: (value: number) => <span className="text-xs font-semibold text-purple-600">{formatNumber(value)}</span>
     },
     {
       key: 'retentionRate' as const,
       header: 'Ret. Rate',
       align: 'center' as const,
-      render: (value: number) => <span className="font-semibold">{value.toFixed(1)}%</span>
+      render: (value: number) => <span className="text-xs font-semibold">{value.toFixed(1)}%</span>
     },
     {
       key: 'avgLTV' as const,
       header: 'Avg LTV',
       align: 'right' as const,
-      render: (value: number) => <span className="font-semibold">{formatCurrency(value)}</span>
-    },
-    {
-      key: 'avgVisits' as const,
-      header: 'Avg Visits',
-      align: 'center' as const,
-      render: (value: number) => <span className="font-semibold">{value.toFixed(1)}</span>
-    },
-    {
-      key: 'avgClasses' as const,
-      header: 'Avg Classes',
-      align: 'center' as const,
-      render: (value: number) => <span className="font-semibold">{value.toFixed(1)}</span>
+      render: (value: number) => <span className="text-xs font-semibold">{formatCurrency(value)}</span>
     }
   ];
 
-  // Calculate totals
+  // Calculate totals with consistent logic
   const totals = {
     entityName: 'TOTAL',
-    totalMembers: entityData.reduce((sum, row) => sum + row.totalMembers, 0),
+    totalClients: entityData.reduce((sum, row) => sum + row.totalClients, 0),
+    newMembers: entityData.reduce((sum, row) => sum + row.newMembers, 0),
     converted: entityData.reduce((sum, row) => sum + row.converted, 0),
     conversionRate: 0,
     retained: entityData.reduce((sum, row) => sum + row.retained, 0),
     retentionRate: 0,
-    avgLTV: entityData.reduce((sum, row) => sum + row.totalLTV, 0) / Math.max(entityData.reduce((sum, row) => sum + row.totalMembers, 0), 1),
-    avgVisits: entityData.reduce((sum, row) => sum + row.totalVisits, 0) / Math.max(entityData.reduce((sum, row) => sum + row.totalMembers, 0), 1),
-    avgClasses: entityData.reduce((sum, row) => sum + row.totalClasses, 0) / Math.max(entityData.reduce((sum, row) => sum + row.totalMembers, 0), 1)
+    avgLTV: entityData.reduce((sum, row) => sum + row.totalLTV, 0) / Math.max(entityData.reduce((sum, row) => sum + row.totalClients, 0), 1)
   };
-  totals.conversionRate = totals.totalMembers > 0 ? (totals.converted / totals.totalMembers) * 100 : 0;
-  totals.retentionRate = totals.totalMembers > 0 ? (totals.retained / totals.totalMembers) * 100 : 0;
+  totals.conversionRate = totals.newMembers > 0 ? (totals.converted / totals.newMembers) * 100 : 0;
+  totals.retentionRate = totals.totalClients > 0 ? (totals.retained / totals.totalClients) * 100 : 0;
 
   return (
     <Card className="bg-white shadow-lg border-0">

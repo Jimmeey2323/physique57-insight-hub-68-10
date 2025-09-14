@@ -66,6 +66,7 @@ export function EnhancedLateCancellationsFilterSection({
 
   const timeframes = [
     { value: 'all', label: 'All Time' },
+    { value: 'prev-month', label: 'Previous Month' },
     { value: '1w', label: 'Last Week' },
     { value: '2w', label: 'Last 2 Weeks' },
     { value: '1m', label: 'Last Month' },

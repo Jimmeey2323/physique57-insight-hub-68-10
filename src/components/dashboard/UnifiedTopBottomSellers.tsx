@@ -8,6 +8,7 @@ import { TrendingUp, TrendingDown, Award, AlertTriangle, Eye, BarChart3, Users, 
 import { SalesData } from '@/types/dashboard';
 import { formatCurrency, formatNumber } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
+import { SalesDrillDownModal } from './SalesDrillDownModal';
 
 interface UnifiedTopBottomSellersProps {
   data: SalesData[];
@@ -16,6 +17,9 @@ interface UnifiedTopBottomSellersProps {
 
 export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = ({ data, onRowClick }) => {
   const [activeType, setActiveType] = useState('product');
+  const [showMore, setShowMore] = useState(false);
+  const [drillDownData, setDrillDownData] = useState<any>(null);
+  const [isDrillDownOpen, setIsDrillDownOpen] = useState(false);
 
   const getGroupedData = (type: 'product' | 'category' | 'member' | 'seller') => {
     const grouped = data.reduce((acc, item) => {
@@ -99,9 +103,9 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
                   <Award className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <span className="bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-                    Top 5 {config.label}
-                  </span>
+              <span className="bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                Top {displayCount} {config.label}
+              </span>
                   <p className="text-sm text-slate-600 font-normal">{config.description}</p>
                 </div>
               </>
@@ -111,9 +115,9 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
                   <AlertTriangle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <span className="bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
-                    Bottom 5 {config.label}
-                  </span>
+              <span className="bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                Bottom {displayCount} {config.label}
+              </span>
                   <p className="text-sm text-slate-600 font-normal">Areas for improvement</p>
                 </div>
               </>
@@ -125,7 +129,40 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
             <div 
               key={seller.name} 
               className="group flex items-center justify-between p-4 rounded-xl bg-white shadow-sm border hover:shadow-md transition-all duration-300 cursor-pointer"
-              onClick={() => onRowClick?.(seller)}
+              onClick={() => {
+                // Filter data for this seller only
+                const filtered = data.filter(item => {
+                  switch (type) {
+                    case 'product': return item.cleanedProduct === seller.name;
+                    case 'category': return item.cleanedCategory === seller.name;
+                    case 'member': return item.customerName === seller.name;
+                    case 'seller': return item.soldBy === seller.name;
+                    default: return false;
+                  }
+                });
+                onRowClick?.({ 
+                  ...seller, 
+                  rawData: filtered, 
+                  filteredTransactionData: filtered,
+                  type,
+                  title: seller.name,
+                  name: seller.name,
+                  grossRevenue: seller.totalValue,
+                  totalRevenue: seller.totalValue,
+                  totalValue: seller.totalValue,
+                  totalCurrent: seller.totalValue,
+                  metricValue: seller.totalValue,
+                  transactions: seller.transactions,
+                  totalTransactions: seller.transactions,
+                  uniqueMembers: seller.uniqueMembers,
+                  totalCustomers: seller.uniqueMembers,
+                  totalChange: 12.5,
+                  months: {},
+                  monthlyValues: {},
+                  isDynamic: true,
+                  calculatedFromFiltered: true
+                });
+              }}
             >
               <div className="flex items-center gap-4 flex-1">
                 <div className={cn(
@@ -168,7 +205,7 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="mt-1 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm"
                   onClick={e => {
                     e.stopPropagation();
                     // Filter data for this seller only
@@ -181,9 +218,11 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
                         default: return false;
                       }
                     });
-                    onRowClick?.({ 
+                    
+                    const drillDownInfo = { 
                       ...seller, 
                       rawData: filtered, 
+                      filteredTransactionData: filtered,
                       type,
                       title: seller.name,
                       name: seller.name,
@@ -198,36 +237,50 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
                       totalChange: 0,
                       months: {},
                       monthlyValues: {}
-                    });
+                    };
+                    
+                    setDrillDownData(drillDownInfo);
+                    setIsDrillDownOpen(true);
                   }}
                 >
                   <Eye className="w-3 h-3 mr-1" />
-                  View Details
+                  View Analytics
                 </Button>
               </div>
             </div>
           ))}
           
-          <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border">
-            <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Performance Summary
-            </h4>
-            <ul className="text-sm text-slate-600 space-y-1">
-              <li>• Average revenue: {formatCurrency(sellers.reduce((sum, s) => sum + s.totalValue, 0) / sellers.length)}</li>
-              <li>• Total transactions: {formatNumber(sellers.reduce((sum, s) => sum + s.transactions, 0))}</li>
-              <li>• Combined customer reach: {formatNumber(sellers.reduce((sum, s) => sum + s.uniqueMembers, 0))} unique customers</li>
-              <li>• Performance spread: {((sellers[0]?.totalValue / sellers[sellers.length - 1]?.totalValue || 1) - 1).toFixed(1)}x variance</li>
-            </ul>
-          </div>
+            <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Performance Summary
+                </h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMore(!showMore)}
+                  className="text-xs"
+                >
+                  Show {showMore ? 'Less' : 'More'}
+                </Button>
+              </div>
+              <ul className="text-sm text-slate-600 space-y-1">
+                <li>• Average revenue: {formatCurrency(sellers.reduce((sum, s) => sum + s.totalValue, 0) / sellers.length)}</li>
+                <li>• Total transactions: {formatNumber(sellers.reduce((sum, s) => sum + s.transactions, 0))}</li>
+                <li>• Combined customer reach: {formatNumber(sellers.reduce((sum, s) => sum + s.uniqueMembers, 0))} unique customers</li>
+                <li>• Performance spread: {((sellers[0]?.totalValue / sellers[sellers.length - 1]?.totalValue || 1) - 1).toFixed(1)}x variance</li>
+              </ul>
+            </div>
         </CardContent>
       </Card>
     );
   };
 
   const groupedData = getGroupedData(activeType as 'product' | 'category' | 'member' | 'seller');
-  const topSellers = groupedData.slice(0, 5);
-  const bottomSellers = groupedData.slice(-5).reverse();
+  const displayCount = showMore ? 10 : 5;
+  const topSellers = groupedData.slice(0, displayCount);
+  const bottomSellers = groupedData.slice(-displayCount).reverse();
 
   return (
     <div className="space-y-6">
@@ -280,6 +333,13 @@ export const UnifiedTopBottomSellers: React.FC<UnifiedTopBottomSellersProps> = (
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Drill Down Modal */}
+      <SalesDrillDownModal
+        isOpen={isDrillDownOpen}
+        onClose={() => setIsDrillDownOpen(false)}
+        data={drillDownData}
+      />
     </div>
   );
 };

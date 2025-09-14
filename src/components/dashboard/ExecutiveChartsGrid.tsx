@@ -197,27 +197,28 @@ export const ExecutiveChartsGrid: React.FC<ExecutiveChartsGridProps> = ({ data, 
           </CardContent>
         </Card>
 
-        {/* Top Trainer Performance */}
+        {/* Funnel Performance */}
         <Card className="bg-white shadow-xl border-0">
           <CardHeader className="bg-gradient-to-r from-orange-600 to-red-600 text-white">
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Top Trainer Revenue
-              <Badge className="bg-white/20 text-white">Top 5</Badge>
+              Funnel Performance
+              <Badge className="bg-white/20 text-white">Leads to Conversion</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={trainerPerformance}>
+              <BarChart data={conversionData.slice(0, 5)}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="trainer" />
+                <XAxis dataKey="source" />
                 <YAxis />
                 <Tooltip formatter={(value: any, name: string) => 
-                  name === 'revenue' ? formatCurrency(value) : value
+                  name === 'rate' ? `${value.toFixed(1)}%` : value
                 } />
                 <Legend />
-                <Bar dataKey="revenue" fill="#F59E0B" name="Revenue ($)" />
-                <Bar dataKey="sessions" fill="#8B5CF6" name="Sessions" />
+                <Bar dataKey="leads" fill="#94A3B8" name="Total Leads" />
+                <Bar dataKey="conversions" fill="#10B981" name="Conversions" />
+                <Bar dataKey="rate" fill="#F59E0B" name="Conversion Rate %" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

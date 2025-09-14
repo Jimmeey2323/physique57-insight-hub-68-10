@@ -24,9 +24,10 @@ import { cn } from '@/lib/utils';
 
 interface FunnelMetricCardsProps {
   data: LeadsData[];
+  onCardClick?: (title: string, data: LeadsData[], metricType: string) => void;
 }
 
-export const FunnelMetricCards: React.FC<FunnelMetricCardsProps> = ({ data }) => {
+export const FunnelMetricCards: React.FC<FunnelMetricCardsProps> = ({ data, onCardClick }) => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   const metrics = useMemo(() => {
@@ -127,6 +128,7 @@ export const FunnelMetricCards: React.FC<FunnelMetricCardsProps> = ({ data }) =>
               )}
               onMouseEnter={() => setHoveredCard(id)}
               onMouseLeave={() => setHoveredCard(null)}
+              onClick={() => onCardClick?.(title, data, id)}
             >
               {/* Animated background */}
               <div className={cn(

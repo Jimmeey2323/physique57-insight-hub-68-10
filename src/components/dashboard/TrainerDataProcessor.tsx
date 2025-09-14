@@ -38,6 +38,17 @@ export interface ProcessedTrainerData {
   conversion: number;
   retention: number;
 
+  // Enhanced metrics
+  fillRate: number;
+  capacity: number;
+  utilizationRate: number;
+  topFormat: string;
+  formatDistribution: { [format: string]: number };
+  revenuePerSession: number;
+  revenuePerCustomer: number;
+  growthRate: number;
+  consistencyScore: number;
+
   // New data points
   uniqueKey: string;
   newMembers: number;
@@ -55,13 +66,50 @@ export const processTrainerData = (payrollData: PayrollData[]): ProcessedTrainer
     const totalCustomers = record.totalCustomers || 0;
     const totalPaid = record.totalPaid || 0;
 
+    const cycleSessions = record.cycleSessions || 0;
+    const barreSessions = record.barreSessions || 0;
+    const strengthSessions = 0; // Not available in current data
+
     // Class averages
     const classAverageExclEmpty = nonEmptySessions > 0 ? totalCustomers / nonEmptySessions : 0;
     const classAverageInclEmpty = totalSessions > 0 ? totalCustomers / totalSessions : 0;
 
-    // Conversion & Retention
-    const conversionRate = Number(record.conversion) || 0;
-    const retentionRate = Number(record.retention) || 0;
+    // Conversion & Retention - extract numeric values from percentage strings
+    const conversionRate = typeof record.conversion === 'string' 
+      ? parseFloat(record.conversion.replace('%', '')) || 0
+      : Number(record.conversion) || 0;
+    const retentionRate = typeof record.retention === 'string' 
+      ? parseFloat(record.retention.replace('%', '')) || 0
+      : Number(record.retention) || 0;
+
+    // Enhanced metrics calculations
+    const capacity = totalSessions * 20; // Assuming 20 capacity per session
+    const fillRate = capacity > 0 ? (totalCustomers / capacity) * 100 : 0;
+    const utilizationRate = totalSessions > 0 ? (nonEmptySessions / totalSessions) * 100 : 0;
+    
+    // Determine top format
+    const formatStats = {
+      'Cycle': cycleSessions,
+      'Barre': barreSessions,
+      'Strength': strengthSessions
+    };
+    const topFormat = Object.entries(formatStats).reduce((a, b) => formatStats[a[0]] > formatStats[b[0]] ? a : b)[0];
+    
+    // Format distribution
+    const formatDistribution = {
+      'Cycle': cycleSessions > 0 ? (cycleSessions / totalSessions) * 100 : 0,
+      'Barre': barreSessions > 0 ? (barreSessions / totalSessions) * 100 : 0,
+      'Strength': strengthSessions > 0 ? (strengthSessions / totalSessions) * 100 : 0
+    };
+
+    // Revenue metrics
+    const revenuePerSession = totalSessions > 0 ? totalPaid / totalSessions : 0;
+    const revenuePerCustomer = totalCustomers > 0 ? totalPaid / totalCustomers : 0;
+
+    // Growth rate and consistency score calculations
+    // Note: These require historical data for accurate calculation
+    const growthRate = 0; // Set to 0 until historical data is available
+    const consistencyScore = Math.min(100, ((nonEmptySessions / Math.max(totalSessions, 1)) * 100)); // Based on fill rate
 
     return {
       trainerId: record.teacherId,
@@ -76,19 +124,19 @@ export const processTrainerData = (payrollData: PayrollData[]): ProcessedTrainer
       totalCustomers,
       totalPaid,
 
-      cycleSessions: record.cycleSessions || 0,
+      cycleSessions,
       emptyCycleSessions: record.emptyCycleSessions || 0,
       nonEmptyCycleSessions: record.nonEmptyCycleSessions || 0,
       cycleCustomers: record.cycleCustomers || 0,
       cycleRevenue: record.cyclePaid || 0,
 
-      strengthSessions: 0,
+      strengthSessions,
       emptyStrengthSessions: 0,
       nonEmptyStrengthSessions: 0,
       strengthCustomers: 0,
       strengthRevenue: 0,
 
-      barreSessions: record.barreSessions || 0,
+      barreSessions,
       emptyBarreSessions: record.emptyBarreSessions || 0,
       nonEmptyBarreSessions: record.nonEmptyBarreSessions || 0,
       barreCustomers: record.barreCustomers || 0,
@@ -96,6 +144,17 @@ export const processTrainerData = (payrollData: PayrollData[]): ProcessedTrainer
 
       classAverageExclEmpty,
       classAverageInclEmpty,
+
+      // Enhanced metrics
+      fillRate,
+      capacity,
+      utilizationRate,
+      topFormat,
+      formatDistribution,
+      revenuePerSession,
+      revenuePerCustomer,
+      growthRate,
+      consistencyScore,
 
       conversion: record.converted || 0,
       retention: record.retained || 0,
@@ -132,6 +191,13 @@ export const getMetricValue = (data: ProcessedTrainerData, metric: string): numb
     case 'newMembers': return data.newMembers;
     case 'convertedMembers': return data.convertedMembers;
     case 'retainedMembers': return data.retainedMembers;
+    case 'fillRate': return data.fillRate;
+    case 'capacity': return data.capacity;
+    case 'utilizationRate': return data.utilizationRate;
+    case 'revenuePerSession': return data.revenuePerSession;
+    case 'revenuePerCustomer': return data.revenuePerCustomer;
+    case 'growthRate': return data.growthRate;
+    case 'consistencyScore': return data.consistencyScore;
     default: return 0;
   }
 };

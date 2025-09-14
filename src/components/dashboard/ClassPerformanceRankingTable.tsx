@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trophy, BarChart3, Eye, Calendar, Clock, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trophy, BarChart3, Eye, Calendar, Clock, User, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { SessionData } from '@/hooks/useSessionsData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -29,9 +29,14 @@ interface GroupedClassData {
   sessionCount: number;
 }
 
+type SortField = keyof GroupedClassData;
+type SortDirection = 'asc' | 'desc';
+
 export const ClassPerformanceRankingTable: React.FC<ClassPerformanceRankingTableProps> = ({ data, location }) => {
   const [selectedClass, setSelectedClass] = useState<GroupedClassData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<SortField>('avgCheckIns');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const itemsPerPage = 10;
 
   if (!data || data.length === 0) {
@@ -55,35 +60,66 @@ export const ClassPerformanceRankingTable: React.FC<ClassPerformanceRankingTable
   }, {} as Record<string, SessionData[]>);
 
   // Calculate performance metrics for each unique class
-  const classPerformance: GroupedClassData[] = Object.entries(classGroups).map(([uniqueId, sessions]) => {
-    const firstSession = sessions[0];
-    const totalCheckIns = sessions.reduce((sum, s) => sum + s.checkedInCount, 0);
-    const totalRevenue = sessions.reduce((sum, s) => sum + (s.revenue || s.totalPaid || 0), 0);
-    const totalCapacity = sessions.reduce((sum, s) => sum + s.capacity, 0);
-    const totalLateCancellations = sessions.reduce((sum, s) => sum + (s.lateCancelledCount || 0), 0);
-    const avgCheckIns = totalCheckIns / sessions.length;
-    const fillPercentage = totalCapacity > 0 ? (totalCheckIns / totalCapacity) * 100 : 0;
+  const classPerformance: GroupedClassData[] = Object.entries(classGroups)
+    .map(([uniqueId, sessions]) => {
+      const firstSession = sessions[0];
+      const totalCheckIns = sessions.reduce((sum, s) => sum + s.checkedInCount, 0);
+      const totalRevenue = sessions.reduce((sum, s) => sum + (s.revenue || s.totalPaid || 0), 0);
+      const totalCapacity = sessions.reduce((sum, s) => sum + s.capacity, 0);
+      const totalLateCancellations = sessions.reduce((sum, s) => sum + (s.lateCancelledCount || 0), 0);
+      const avgCheckIns = totalCheckIns / sessions.length;
+      const fillPercentage = totalCapacity > 0 ? (totalCheckIns / totalCapacity) * 100 : 0;
 
-    return {
-      uniqueId,
-      className: firstSession.cleanedClass || firstSession.classType || 'Unknown Class',
-      trainerName: firstSession.trainerName || `${firstSession.trainerFirstName} ${firstSession.trainerLastName}`.trim(),
-      dayOfWeek: firstSession.dayOfWeek,
-      time: firstSession.time,
-      location: firstSession.location,
-      sessions,
-      sessionCount: sessions.length,
-      avgCheckIns,
-      fillPercentage,
-      totalRevenue,
-      totalCheckIns,
-      totalCapacity,
-      totalLateCancellations
-    };
-  });
+      return {
+        uniqueId,
+        className: firstSession.cleanedClass || firstSession.classType || 'Unknown Class',
+        trainerName: firstSession.trainerName || `${firstSession.trainerFirstName} ${firstSession.trainerLastName}`.trim(),
+        dayOfWeek: firstSession.dayOfWeek,
+        time: firstSession.time,
+        location: firstSession.location,
+        sessions,
+        sessionCount: sessions.length,
+        avgCheckIns,
+        fillPercentage,
+        totalRevenue,
+        totalCheckIns,
+        totalCapacity,
+        totalLateCancellations
+      };
+    })
+    .filter(classData => 
+      classData.sessionCount >= 2 && 
+      !classData.className.toLowerCase().includes('hosted')
+    );
 
-  // Sort by average check-ins (attendance priority)
-  const sortedPerformance = classPerformance.sort((a, b) => b.avgCheckIns - a.avgCheckIns);
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    setCurrentPage(1);
+  };
+
+  const sortedPerformance = useMemo(() => {
+    return [...classPerformance].sort((a, b) => {
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      return 0;
+    });
+  }, [classPerformance, sortField, sortDirection]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedPerformance.length / itemsPerPage);
@@ -110,27 +146,137 @@ export const ClassPerformanceRankingTable: React.FC<ClassPerformanceRankingTable
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Rank</TableHead>
-                  <TableHead>Class Name</TableHead>
-                  <TableHead>Trainer</TableHead>
-                  <TableHead>Day</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Sessions</TableHead>
-                  <TableHead>Avg Check-ins</TableHead>
-                  <TableHead>Fill Rate</TableHead>
-                  <TableHead>Total Attendance</TableHead>
-                  <TableHead>Late Cancelled</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="whitespace-nowrap">Rank</TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('className')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Class Name
+                      {sortField === 'className' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('trainerName')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Trainer
+                      {sortField === 'trainerName' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('dayOfWeek')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Day
+                      {sortField === 'dayOfWeek' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('time')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Time
+                      {sortField === 'time' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('location')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Location
+                      {sortField === 'location' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('sessionCount')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Sessions
+                      {sortField === 'sessionCount' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('avgCheckIns')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Avg Check-ins
+                      {sortField === 'avgCheckIns' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('fillPercentage')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Fill Rate
+                      {sortField === 'fillPercentage' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('totalCheckIns')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Total Attendance
+                      {sortField === 'totalCheckIns' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('totalLateCancellations')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Late Cancelled
+                      {sortField === 'totalLateCancellations' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="whitespace-nowrap cursor-pointer hover:bg-muted/20 select-none"
+                    onClick={() => handleSort('totalRevenue')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Revenue
+                      {sortField === 'totalRevenue' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="whitespace-nowrap">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedData.map((classData, index) => {
                   const actualRank = (currentPage - 1) * itemsPerPage + index + 1;
                   return (
-                  <TableRow key={classData.uniqueId} className="hover:bg-muted/50">
-                    <TableCell className="text-center">
+                  <TableRow key={classData.uniqueId}>
+                    <TableCell className="text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         {actualRank <= 3 && (
                           <Trophy className={`w-4 h-4 ${actualRank === 1 ? 'text-yellow-500' : actualRank === 2 ? 'text-gray-400' : 'text-amber-600'}`} />
@@ -138,50 +284,50 @@ export const ClassPerformanceRankingTable: React.FC<ClassPerformanceRankingTable
                         <span className="font-bold">{actualRank}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <span className="font-medium">{classData.className}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <User className="w-4 h-4 text-gray-500" />
                         <span className="text-sm">{classData.trainerName}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4 text-gray-500" />
                         <span className="text-sm">{classData.dayOfWeek}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4 text-gray-500" />
                         <span className="text-sm">{classData.time}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">
+                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
                       {classData.location}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center whitespace-nowrap">
                       <Badge variant="outline">{classData.sessionCount}</Badge>
                     </TableCell>
-                    <TableCell className="text-center font-semibold">
+                    <TableCell className="text-center font-semibold whitespace-nowrap">
                       {classData.avgCheckIns.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center whitespace-nowrap">
                       <Badge variant={classData.fillPercentage >= 80 ? 'default' : classData.fillPercentage >= 60 ? 'secondary' : 'destructive'}>
                         {classData.fillPercentage.toFixed(1)}%
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center font-semibold">
+                    <TableCell className="text-center font-semibold whitespace-nowrap">
                       {classData.totalCheckIns.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center whitespace-nowrap">
                       <Badge variant={classData.totalLateCancellations > 10 ? 'destructive' : classData.totalLateCancellations > 5 ? 'secondary' : 'default'}>
                         {classData.totalLateCancellations}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="text-right font-semibold whitespace-nowrap">
                       ₹{classData.totalRevenue.toLocaleString()}
                     </TableCell>
                     <TableCell>

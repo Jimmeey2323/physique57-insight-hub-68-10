@@ -369,7 +369,11 @@ export const EnhancedClassFormatPerformanceTable: React.FC<EnhancedClassFormatPe
                 {processedData.length} formats
               </Badge>
             </CardTitle>
-            <AdvancedExportButton filename="class-format-performance" />
+            <AdvancedExportButton 
+              additionalData={{ classFormatData: processedData }}
+              defaultFileName="class-format-performance"
+              size="sm"
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

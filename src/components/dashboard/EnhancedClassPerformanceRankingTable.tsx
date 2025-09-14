@@ -379,7 +379,11 @@ export const EnhancedClassPerformanceRankingTable: React.FC<EnhancedClassPerform
                 {processedData.length} classes
               </Badge>
             </CardTitle>
-            <AdvancedExportButton filename="class-performance-rankings" />
+            <AdvancedExportButton 
+              additionalData={{ classPerformanceData: processedData }}
+              defaultFileName="class-performance-rankings"
+              size="sm"
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

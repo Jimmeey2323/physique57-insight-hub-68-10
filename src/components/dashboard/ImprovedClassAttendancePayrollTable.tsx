@@ -256,7 +256,11 @@ export const ImprovedClassAttendancePayrollTable: React.FC<ImprovedClassAttendan
                 Advanced metrics with trend analysis and interactive controls
               </p>
             </div>
-            <AdvancedExportButton filename="improved-payroll-analysis" />
+            <AdvancedExportButton 
+              payrollData={data}
+              defaultFileName="improved-payroll-analysis"
+              size="sm"
+            />
           </div>
         </CardHeader>
         

@@ -342,7 +342,12 @@ export const MultiMetricMonthlyTrendsTable: React.FC<MultiMetricMonthlyTrendsTab
                 {processedTrendData.length} entries
               </Badge>
             </CardTitle>
-            <AdvancedExportButton filename={`monthly-trends-${activeTrendView}`} />
+            <AdvancedExportButton 
+              additionalData={{ monthlyTrendsData: processedTrendData }}
+              payrollData={payrollData}
+              defaultFileName={`monthly-trends-${activeTrendView}`}
+              size="sm"
+            />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

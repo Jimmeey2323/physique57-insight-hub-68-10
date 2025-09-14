@@ -119,4 +119,4 @@ function OptimizedTableComponent<T extends Record<string, any>>({
 
 export const OptimizedTable = memo(OptimizedTableComponent) as <T extends Record<string, any>>(
   props: OptimizedTableProps<T>
-) => JSX.Element;
+) => React.ReactElement | null;

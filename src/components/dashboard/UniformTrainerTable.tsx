@@ -16,6 +16,7 @@ interface UniformTrainerTableProps {
   columns: Column[];
   loading?: boolean;
   stickyHeader?: boolean;
+  stickyFirstColumn?: boolean;
   showFooter?: boolean;
   footerData?: any;
   maxHeight?: string;
@@ -25,12 +26,15 @@ interface UniformTrainerTableProps {
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
   onRowClick?: (row: any) => void;
+  showDrillDown?: boolean;
+  showExpandableRows?: boolean;
 }
 export const UniformTrainerTable: React.FC<UniformTrainerTableProps> = ({
   data,
   columns,
   loading = false,
   stickyHeader = false,
+  stickyFirstColumn = false,
   showFooter = false,
   footerData,
   maxHeight = "600px",
@@ -39,7 +43,9 @@ export const UniformTrainerTable: React.FC<UniformTrainerTableProps> = ({
   onSort,
   sortField,
   sortDirection,
-  onRowClick
+  onRowClick,
+  showDrillDown = false,
+  showExpandableRows = false
 }) => {
   if (loading) {
     return <div className="flex items-center justify-center p-8">
@@ -52,7 +58,9 @@ export const UniformTrainerTable: React.FC<UniformTrainerTableProps> = ({
     }
   };
   return <div className={cn("relative overflow-auto rounded-xl", className)} style={{
-    maxHeight
+    maxHeight,
+    overflowX: 'auto',
+    overflowY: 'auto'
   }}>
       <Table className="w-full table-fixed">
         <TableHeader className={cn(
@@ -60,10 +68,10 @@ export const UniformTrainerTable: React.FC<UniformTrainerTableProps> = ({
           "bg-gradient-to-r text-primary-foreground border-none shadow-sm",
           headerGradient
         )}>
-          <TableRow className="border-none" style={{
+          <TableRow className="border-none hover:bg-transparent" style={{
           height: '48px'
         }}>
-            {columns.map(column => <TableHead key={column.key} className={cn("font-bold text-primary-foreground px-4 text-sm whitespace-nowrap", column.align === 'center' && 'text-center', column.align === 'right' && 'text-right', column.sortable && 'cursor-pointer hover:bg-primary-foreground/10 transition-colors', column.className)} style={{
+            {columns.map((column, index) => <TableHead key={column.key} className={cn("font-bold text-primary-foreground px-4 text-sm whitespace-nowrap", column.align === 'center' && 'text-center', column.align === 'right' && 'text-right', column.sortable && 'cursor-pointer hover:bg-primary-foreground/10 transition-colors', stickyFirstColumn && index === 0 && 'sticky left-0 z-30 border-r border-white/20', column.className)} style={{
             height: '48px',
             width: column.width || 'auto'
            }} onClick={() => handleSort(column)}>
@@ -78,7 +86,7 @@ export const UniformTrainerTable: React.FC<UniformTrainerTableProps> = ({
           {data.map((row, index) => <TableRow key={index} className={cn("hover:bg-muted/40 transition-all duration-200 table-row-stripe", onRowClick && "cursor-pointer hover:scale-[1.01] hover:shadow-sm")} style={{
           height: '40px'
         }} onClick={() => onRowClick?.(row)}>
-              {columns.map(column => <TableCell key={column.key} className={cn("px-4 py-3 text-sm font-medium", column.align === 'center' && 'text-center', column.align === 'right' && 'text-right', column.className)} style={{
+              {columns.map((column, colIndex) => <TableCell key={column.key} className={cn("px-4 py-3 text-sm font-medium", column.align === 'center' && 'text-center', column.align === 'right' && 'text-right', stickyFirstColumn && colIndex === 0 && 'sticky left-0 z-10 bg-white border-r border-slate-200', column.className)} style={{
             height: '40px'
           }}>
                   <div className="flex items-center h-full">
